@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'bonus_task'
+package_name = 'task1A'
 
 setup(
     name=package_name,
@@ -16,13 +16,10 @@ setup(
     maintainer='dev',
     maintainer_email='adityadevsingh16@gmail.com',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            
-        'goal_publisher = bonus_task.goal_publisher:main',
-        'go_to_goal = bonus_task.go_to_goal:main',
         ],
     },
 )
