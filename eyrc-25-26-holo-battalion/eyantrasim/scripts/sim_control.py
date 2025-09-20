@@ -41,10 +41,10 @@ class BattalionController(Node):
         # self.prev_timee = time.time()
         self.prev_dist_error = 0.0
         self.prev_yaw_error = 0.0
-        self.kp_linear = 0.05
-        self.kd_linear = 0.01
-        self.kp_angular = 0.2
-        self.kd_angular = 0.09
+        self.kp_linear = 0.8
+        self.kd_linear = 0.2
+        self.kp_angular = 1.6
+        self.kd_angular = 0.070
 
         self.target_reached = False
         self.glacio_reached = False
@@ -131,6 +131,10 @@ class BattalionController(Node):
         angular_cmd = self.kp_angular*yaw_error + self.kd_angular*((yaw_error-prev_yaw_error)/dt)
         
         # print(linear_cmd)
+        if linear_cmd<0.05:
+            self.kp_linear=3.0
+        linear_cmd = self.kp_linear*dist_error + self.kd_linear*((dist_error-prev_dist_error)/dt)
+
 
         self.prev_dist_error[bot] = dist_error
         self.prev_yaw_error[bot] = yaw_error
@@ -140,8 +144,8 @@ class BattalionController(Node):
         
         self.target_reached = False
         if abs(error_x) < 0.01 and abs(error_y) < 0.01:
-            vel.linear.x = 0.0
-            vel.angular.z = 0.0
+            # vel.linear.x = 0.0
+            # vel.angular.z = 0.0
             self.target_reached = True
             # print('done')
 
