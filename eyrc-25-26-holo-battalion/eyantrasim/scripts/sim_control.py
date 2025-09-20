@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist
 from eyantrasim_msgs.msg import Pose
 import ast 
 import math 
+import time
 
 class BattalionController(Node):
     def __init__(self):
@@ -37,23 +38,16 @@ class BattalionController(Node):
         self.current_pose_crystal = None
         self.current_pose_frostbite = None
 
+        self.prev_time = time.time()
+        self.prev_dist_error = 0.0
+        self.prev_yaw_error = 0.0
+        self.kp_linear = 0.05
+        self.kd_linear = 0.03
+        self.kp_angular = 0.5
+        self.kd_angular = 0.2
 
-        self.kp_linear = 0.02
-        self.kd_linear = 0.01
-        self.kp_angular = 0.3
-        self.kd_angular = 0.1
-        self.dt = 0.1
-        self.prev_error_x = 0.0
-        self.prev_error_y = 0.0
-        self.prev_error_yaw = 0.0
-        self.prev_distance2target = 0.0
-        self.wp_glacio = 1
-        self.glacio_reached = False
-        self.min_err_glacio = 100000.0
+        self.glacio_reached = False 
 
-        self.max_linear_vel = 0.5
-        self.max_angular_vel = 0.5
-        
         self.get_targets()
         
         self.timer = self.create_timer(0.1, self.control_loop)
@@ -80,8 +74,6 @@ class BattalionController(Node):
             else :
                 self.targets_frostbite.append(coordinate)
 
-        print(self.targets_glacio[0])
-
     # --- Pose callbacks ---
     def pose_glacio_cb(self, msg):
         self.current_pose_glacio = msg
@@ -94,109 +86,57 @@ class BattalionController(Node):
 
     # --- Example controller ---
     def compute_velocity(self, current_pose, target_pose):
-
         vel = Twist()
-        current_x = current_pose.x
-        current_y = current_pose.y
+
+        current_x = current_pose.x*0.022222223
+        current_y = current_pose.y*0.022222223
         current_yaw = current_pose.theta
+        target_x,target_y = target_pose
+        target_x = target_x*0.022222223 
+        target_y = target_y*0.022222223 
+        
+        error_x = target_x - current_x
+        error_y = target_y - current_y
+        target_yaw = math.atan2(error_y,error_x)
 
-        target_x , target_y = target_pose
-        # print(f'current_x {current_x} current_y {current_y} current_yaw {current_yaw}')
-        # print(f'traget_X {target_x} ,traget_y {target_y}')
+        dist_error = math.sqrt(error_x**2 + error_y**2)
+        yaw_error = target_yaw - current_yaw
 
-        error_x = target_x - current_x  
-        error_y = target_y - current_y 
-        distance2target = math.sqrt(error_x**2 + error_y**2)
+        while yaw_error > math.pi:
+            yaw_error -= 2 * math.pi
+        while yaw_error < -math.pi:
+            yaw_error += 2 * math.pi
 
-        if self.min_err_glacio > distance2target:
-            self.min_err_glacio = distance2target
-        # print(self.min_err_glacio)
+        current_time = time.time()
+        dt = current_time - self.prev_time if self.prev_time else 0.1
+        self.prev_time = current_time
 
-        # print(f'errro_x {error_x}, error_y {error_y},distance2target{distance2target}')
-
-        desired_yaw = math.atan2(error_y, error_x)
-        error_yaw = desired_yaw - current_yaw
-
-        while error_yaw > math.pi:
-            error_yaw -= 2 * math.pi    
-        while error_yaw < -math.pi:
-            error_yaw += 2 * math.pi
-    
-        # print(error_yaw)
-        # print(distance2target)
-        linear_cmd = self.kp_linear*distance2target + self.kd_linear*((distance2target-self.prev_distance2target )/self.dt)
-        self.prev_distance2target = distance2target
-        # print(distance2target)
+        linear_cmd = self.kp_linear*dist_error + self.kd_linear*((dist_error-self.prev_dist_error)/dt)
+        angular_cmd = self.kp_angular*yaw_error + self.kd_angular*((yaw_error-self.prev_yaw_error)/dt)
+        
         # print(linear_cmd)
-        # # print(linear_cmd)
 
-        angular_cmd = self.kp_angular*error_yaw + self.kd_angular*((error_yaw-self.prev_error_yaw)/self.dt)
-        self.prev_error_yaw = error_yaw
-        # print(error_yaw)
-        # print(angular_cmd)
+        self.prev_dist_error = dist_error
+        self.prev_yaw_error = yaw_error
 
-        # # print(linear_cmd)
-        if linear_cmd > 0.5:
-            linear_cmd = 0.5
-     
+        vel.linear.x = linear_cmd
+        vel.angular.z = angular_cmd
 
-        # print(distance2target)
-        # # print('outside the error check')
-        # if  distance2target < 0.1 and error_yaw < 0.08:
-        #     # print('in the error check')
-        #     self.glacio_reached = True
-        #     return vel , self.glacio_reached
-
-        # if error_yaw > 0.1:
-        #     vel.linear.x = 0.0
-        #     vel.angular.z = max(-self.max_angular_vel, min(self.max_angular_vel, angular_cmd))
-        # if distance2target > 1.0 :
-        #      vel.linear.x = max(-self.max_linear_vel, min(self.max_linear_vel, linear_cmd))
-        #      vel.angular.z = 0.0
-
-        if error_yaw > 0.01 : 
-            vel.angular.z = angular_cmd
-            vel.linear.x = 0.0 
-    
-        if error_yaw < 0.1 : 
-            vel.angular.z = 0.0
-            vel.linear.x = linear_cmd            
-
-        if error_x < 0.1 and error_y < 0.1 :
+        if error_x < 0.001 and error_y < 0.001:
             vel.linear.x = 0.0 
             vel.angular.z = 0.0 
-            self.glacio_reached = True 
-        
-        
-        # vel.linear.x = max(-self.max_linear_vel, min(self.max_linear_vel, linear_cmd))
-        # vel.angular.z = max(-self.max_angular_vel, min(self.max_angular_vel, angular_cmd))
+            self.glacio_reached = True
+            print('done')
 
-        # if int(current_x) == target_x and int(current_y) == target_y:
-        #     vel.linear.x = 0.0
-        #     vel.angular.z = 0.0
-        # error = target_pose - current_pose
-        # derivate = (error-self.previous_error)/dt
-        return vel , self.glacio_reached
-
-    
+        return vel 
 
     # --- Control loop for all bots ---
     def control_loop(self):
         if self.current_pose_glacio and self.targets_glacio:
-            # print('in the if')
-            vel , self.glacio_reached = self.compute_velocity(self.current_pose_glacio, self.targets_glacio[self.wp_glacio])
-            # print(self.glacio_reached)
-
-            if self.glacio_reached : 
-                print('in the second if')
-                self.wp_glacio += 1
-                print(self.wp_glacio)
-                self.glacio_reached = False
-
+            
+            vel = self.compute_velocity(self.current_pose_glacio, (380,400))
             self.pub_glacio.publish(vel)
 
-        # vel , self.glacio_reached = self.compute_velocity(self.current_pose_glacio, (570,350))
-        # self.pub_glacio.publish(vel)
 
 def main(args=None):
     rclpy.init(args=args)
