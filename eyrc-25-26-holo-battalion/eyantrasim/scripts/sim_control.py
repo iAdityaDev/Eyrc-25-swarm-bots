@@ -42,11 +42,12 @@ class BattalionController(Node):
         self.prev_dist_error = 0.0
         self.prev_yaw_error = 0.0
         self.kp_linear = 0.05
-        self.kd_linear = 0.03
-        self.kp_angular = 0.5
-        self.kd_angular = 0.2
+        self.kd_linear = 0.01
+        self.kp_angular = 0.2
+        self.kd_angular = 0.09
 
         self.glacio_reached = False 
+        self.current_wp_glacio = 0
 
         self.get_targets()
         
@@ -122,19 +123,24 @@ class BattalionController(Node):
         vel.linear.x = linear_cmd
         vel.angular.z = angular_cmd
 
-        if error_x < 0.001 and error_y < 0.001:
-            vel.linear.x = 0.0 
-            vel.angular.z = 0.0 
+        if abs(error_x) < 0.01 and abs(error_y) < 0.01:
+            vel.linear.x = 0.0
+            vel.angular.z = 0.0
             self.glacio_reached = True
-            print('done')
+            # print('done')
 
-        return vel 
+        return vel , self.glacio_reached
 
     # --- Control loop for all bots ---
     def control_loop(self):
         if self.current_pose_glacio and self.targets_glacio:
-            
-            vel = self.compute_velocity(self.current_pose_glacio, (380,400))
+
+            vel,self.glacio_reached = self.compute_velocity(self.current_pose_glacio,self.targets_glacio[self.current_wp_glacio])
+            if self.glacio_reached:
+                self.glacio_reached = False 
+                self.current_wp_glacio += 1 
+                print(self.current_wp_glacio)
+                
             self.pub_glacio.publish(vel)
 
 
