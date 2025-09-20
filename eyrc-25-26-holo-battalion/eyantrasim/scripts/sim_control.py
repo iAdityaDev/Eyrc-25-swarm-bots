@@ -38,7 +38,7 @@ class BattalionController(Node):
         self.current_pose_crystal = None
         self.current_pose_frostbite = None
 
-        self.prev_time = time.time()
+        # self.prev_timee = time.time()
         self.prev_dist_error = 0.0
         self.prev_yaw_error = 0.0
         self.kp_linear = 0.05
@@ -46,8 +46,18 @@ class BattalionController(Node):
         self.kp_angular = 0.2
         self.kd_angular = 0.09
 
-        self.glacio_reached = False 
+        self.target_reached = False
+        self.glacio_reached = False
+        self.crystal_reached = False
+        self.frostbite_reached = False
         self.current_wp_glacio = 0
+        self.current_wp_crystal = 0
+        self.current_wp_frostbite = 0
+        
+        self.prev_time = {}
+        self.prev_dist_error = {}
+        self.prev_yaw_error = {}
+
 
         self.get_targets()
         
@@ -86,7 +96,7 @@ class BattalionController(Node):
         self.current_pose_frostbite = msg
 
     # --- Example controller ---
-    def compute_velocity(self, current_pose, target_pose):
+    def compute_velocity(self, bot , current_pose, target_pose):
         vel = Twist()
 
         current_x = current_pose.x*0.022222223
@@ -94,7 +104,7 @@ class BattalionController(Node):
         current_yaw = current_pose.theta
         target_x,target_y = target_pose
         target_x = target_x*0.022222223 
-        target_y = target_y*0.022222223 
+        target_y = target_y*0.022222223
         
         error_x = target_x - current_x
         error_y = target_y - current_y
@@ -104,44 +114,70 @@ class BattalionController(Node):
         yaw_error = target_yaw - current_yaw
 
         while yaw_error > math.pi:
-            yaw_error -= 2 * math.pi
+            yaw_error -= 2 * math.pi    
         while yaw_error < -math.pi:
             yaw_error += 2 * math.pi
 
         current_time = time.time()
-        dt = current_time - self.prev_time if self.prev_time else 0.1
-        self.prev_time = current_time
+        prev_time = self.prev_time.get(bot, current_time - 0.1)
+        dt = current_time - prev_time
 
-        linear_cmd = self.kp_linear*dist_error + self.kd_linear*((dist_error-self.prev_dist_error)/dt)
-        angular_cmd = self.kp_angular*yaw_error + self.kd_angular*((yaw_error-self.prev_yaw_error)/dt)
+        prev_dist_error = self.prev_dist_error.get(bot, 0.0)
+        prev_yaw_error = self.prev_yaw_error.get(bot, 0.0)
+
+        self.prev_time[bot] = current_time
+
+        linear_cmd = self.kp_linear*dist_error + self.kd_linear*((dist_error-prev_dist_error)/dt)
+        angular_cmd = self.kp_angular*yaw_error + self.kd_angular*((yaw_error-prev_yaw_error)/dt)
         
         # print(linear_cmd)
 
-        self.prev_dist_error = dist_error
-        self.prev_yaw_error = yaw_error
+        self.prev_dist_error[bot] = dist_error
+        self.prev_yaw_error[bot] = yaw_error
 
         vel.linear.x = linear_cmd
         vel.angular.z = angular_cmd
-
+        
+        self.target_reached = False
         if abs(error_x) < 0.01 and abs(error_y) < 0.01:
             vel.linear.x = 0.0
             vel.angular.z = 0.0
-            self.glacio_reached = True
+            self.target_reached = True
             # print('done')
 
-        return vel , self.glacio_reached
+        return vel , self.target_reached
 
     # --- Control loop for all bots ---
     def control_loop(self):
         if self.current_pose_glacio and self.targets_glacio:
 
-            vel,self.glacio_reached = self.compute_velocity(self.current_pose_glacio,self.targets_glacio[self.current_wp_glacio])
+            vel_glacio,self.glacio_reached = self.compute_velocity("glacio",self.current_pose_glacio,self.targets_glacio[self.current_wp_glacio])
             if self.glacio_reached:
                 self.glacio_reached = False 
                 self.current_wp_glacio += 1 
-                print(self.current_wp_glacio)
+                # print(self.current_wp_glacio)
                 
-            self.pub_glacio.publish(vel)
+            self.pub_glacio.publish(vel_glacio)
+
+        if self.current_pose_crystal and self.targets_crystal:
+
+            vel_crystal,self.crystal_reached = self.compute_velocity("crystal",self.current_pose_crystal,self.targets_crystal[self.current_wp_crystal])
+            if self.crystal_reached:
+                self.crystal_reached = False 
+                self.current_wp_crystal += 1 
+                print(self.current_wp_crystal)
+                
+            self.pub_crystal.publish(vel_crystal)
+
+        if self.current_pose_frostbite and self.targets_frostbite:
+
+            vel_frostbite,self.frostbite_reached = self.compute_velocity("frostbite",self.current_pose_frostbite,self.targets_frostbite[self.current_wp_frostbite])
+            if self.frostbite_reached:
+                self.frostbite_reached = False 
+                self.current_wp_frostbite += 1 
+                print(self.current_wp_frostbite)
+                
+            self.pub_frostbite.publish(vel_frostbite)
 
 
 def main(args=None):
