@@ -41,10 +41,10 @@ class BattalionController(Node):
         # self.prev_timee = time.time()
         self.prev_dist_error = 0.0
         self.prev_yaw_error = 0.0
-        self.kp_linear = 0.8
-        self.kd_linear = 0.2
-        self.kp_angular = 1.6
-        self.kd_angular = 0.070
+        self.kp_linear = 0.1
+        self.kd_linear = 0.08
+        self.kp_angular = 0.6
+        self.kd_angular = 0.09
 
         self.target_reached = False
         self.glacio_reached = False
@@ -131,10 +131,6 @@ class BattalionController(Node):
         angular_cmd = self.kp_angular*yaw_error + self.kd_angular*((yaw_error-prev_yaw_error)/dt)
         
         # print(linear_cmd)
-        if linear_cmd<0.05:
-            self.kp_linear=3.0
-        linear_cmd = self.kp_linear*dist_error + self.kd_linear*((dist_error-prev_dist_error)/dt)
-
 
         self.prev_dist_error[bot] = dist_error
         self.prev_yaw_error[bot] = yaw_error
@@ -153,7 +149,7 @@ class BattalionController(Node):
 
     # --- Control loop for all bots ---
     def control_loop(self):
-        if self.current_pose_glacio and self.targets_glacio:
+        if self.current_pose_glacio and self.targets_glacio and self.current_wp_glacio < len(self.targets_glacio):
 
             vel_glacio,self.glacio_reached = self.compute_velocity("glacio",self.current_pose_glacio,self.targets_glacio[self.current_wp_glacio])
             if self.glacio_reached:
@@ -163,7 +159,7 @@ class BattalionController(Node):
                 
             self.pub_glacio.publish(vel_glacio)
 
-        if self.current_pose_crystal and self.targets_crystal:
+        if self.current_pose_crystal and self.targets_crystal and self.current_wp_crystal < len(self.targets_crystal):
 
             vel_crystal,self.crystal_reached = self.compute_velocity("crystal",self.current_pose_crystal,self.targets_crystal[self.current_wp_crystal])
             if self.crystal_reached:
@@ -173,7 +169,7 @@ class BattalionController(Node):
                 
             self.pub_crystal.publish(vel_crystal)
 
-        if self.current_pose_frostbite and self.targets_frostbite:
+        if self.current_pose_frostbite and self.targets_frostbite and self.current_wp_frostbite < len(self.targets_frostbite):
 
             vel_frostbite,self.frostbite_reached = self.compute_velocity("frostbite",self.current_pose_frostbite,self.targets_frostbite[self.current_wp_frostbite])
             if self.frostbite_reached:
