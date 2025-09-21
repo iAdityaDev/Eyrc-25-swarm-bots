@@ -41,18 +41,18 @@ class BattalionController(Node):
         # self.prev_timee = time.time()
         self.prev_dist_error = 0.0
         self.prev_yaw_error = 0.0
-        self.kp_linear = 0.1
-        self.kd_linear = 0.08
-        self.kp_angular = 0.6
-        self.kd_angular = 0.09
+        self.kp_linear = 0.8
+        self.kd_linear = 0.2
+        self.kp_angular = 1.6
+        self.kd_angular = 0.7
 
         self.target_reached = False
         self.glacio_reached = False
         self.crystal_reached = False
         self.frostbite_reached = False
         self.current_wp_glacio = 0
-        self.current_wp_crystal = 0
-        self.current_wp_frostbite = 0
+        self.current_wp_crystal = 1
+        self.current_wp_frostbite = 1
         
         self.prev_time = {}
         self.prev_dist_error = {}
@@ -80,10 +80,16 @@ class BattalionController(Node):
             
             if (i<50) :
                 self.targets_glacio.append(coordinate)
-            elif (i>49 and i<101) :
+            elif (i>49 and i<100) :
                 self.targets_crystal.append(coordinate)
             else :
                 self.targets_frostbite.append(coordinate)
+# 
+        print(len(self.targets_glacio))
+        print(len(self.targets_crystal))
+        # print((self.targets_crystal[49]))
+        print(len(self.targets_frostbite))
+        print((self.targets_frostbite[1]))
 
     # --- Pose callbacks ---
     def pose_glacio_cb(self, msg):
@@ -98,25 +104,37 @@ class BattalionController(Node):
     # --- Example controller ---
     def compute_velocity(self, bot , current_pose, target_pose):
         vel = Twist()
-
         current_x = current_pose.x*0.022222223
         current_y = current_pose.y*0.022222223
         current_yaw = current_pose.theta
         target_x,target_y = target_pose
-        target_x = target_x*0.022222223 
+        target_x = target_x*0.022222223
         target_y = target_y*0.022222223
-        
+
+        # print(current_yaw)
+
+        # while current_yaw > math.pi:
+        #     current_yaw -= 2 * math.pi    
+        # while current_yaw < -math.pi:
+        #     current_yaw += 2 * math.pi
+        # print(current_yaw)
         error_x = target_x - current_x
         error_y = target_y - current_y
         target_yaw = math.atan2(error_y,error_x)
-
+        
         dist_error = math.sqrt(error_x**2 + error_y**2)
         yaw_error = target_yaw - current_yaw
 
+        # print('yaw_error',yaw_error)
         while yaw_error > math.pi:
             yaw_error -= 2 * math.pi    
         while yaw_error < -math.pi:
             yaw_error += 2 * math.pi
+        # print(yaw_error)
+
+        if self.current_wp_crystal == 0:
+              self.target_reached = True
+
 
         current_time = time.time()
         prev_time = self.prev_time.get(bot, current_time - 0.1)
@@ -143,7 +161,7 @@ class BattalionController(Node):
             # vel.linear.x = 0.0
             # vel.angular.z = 0.0
             self.target_reached = True
-            # print('done')
+            # print('done'
 
         return vel , self.target_reached
 
@@ -165,7 +183,7 @@ class BattalionController(Node):
             if self.crystal_reached:
                 self.crystal_reached = False 
                 self.current_wp_crystal += 1 
-                print(self.current_wp_crystal)
+                # print(self.current_wp_crystal)
                 
             self.pub_crystal.publish(vel_crystal)
 
@@ -175,7 +193,7 @@ class BattalionController(Node):
             if self.frostbite_reached:
                 self.frostbite_reached = False 
                 self.current_wp_frostbite += 1 
-                print(self.current_wp_frostbite)
+                # print(self.current_wp_frostbite)
                 
             self.pub_frostbite.publish(vel_frostbite)
 
