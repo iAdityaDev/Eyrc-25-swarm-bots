@@ -31,7 +31,6 @@ install(DIRECTORY launch
 install(PROGRAMS 
   include/eyantrasim/eyantrasim_node
   scripts/sim_control.py
-  scripts/test.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
