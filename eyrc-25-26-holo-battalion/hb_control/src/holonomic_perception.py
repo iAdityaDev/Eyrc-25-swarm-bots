@@ -16,6 +16,7 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from hb_interfaces.msg import Pose2D, Poses2D
+from eyantrasim_msgs.msg import Pose
 
 class PoseDetector(Node):
     def __init__(self):
@@ -53,6 +54,7 @@ class PoseDetector(Node):
             5: [[0, 2438.4-50], [50, 2438.4-50], [50, 2438.4], [0, 2438.4]],
             7: [[2438.4-50, 2438.4-50], [2438.4-50, 2438.4],[2438.4-50, 2438.4], [2438.4, 2438.4]]
         }
+        self.yaw = None
  
         
         # ---------- ARUCO SETUP ----------
@@ -158,6 +160,7 @@ class PoseDetector(Node):
             self.H_matrix, _ = cv.findHomography(self.pixel_matrix, self.world_matrix)
 
             # print(self.H_matrix)
+            rvecs , tvecs , _ = cv.aruco.estimatePoseSingleMarkers(corners,self.bots_marker_length,self.camera_matrix,self.dist_coeffs)
 
             for i ,marker_id in enumerate(ids.flatten()):
                 if marker_id in [1,3,5,7]:
@@ -168,19 +171,38 @@ class PoseDetector(Node):
                 center_y = np.mean(marker_corners[:,1])
 
                 x_world, y_world = self.pixel_to_world(center_x, center_y)
-                print(marker_id,x_world,y_world)
+                # print(marker_id,x_world,y_world)
+
+                rmat,jac = cv.Rodrigues(rvecs[i])
+                self.yaw = math.atan2(rmat[1,0],rmat[0,0])
+                self.yaw = math.degrees(self.yaw)
+
+                if self.yaw < 0:
+                    self.yaw += 360
+
+                # print(self.yaw)
+                if marker_id == 9 :
+                    self.detected_bots[marker_id] = (x_world, y_world, self.yaw)
+                else:
+                    self.detected_crates[marker_id] = (x_world, y_world, self.yaw)
+
+            # print(self.detected_crates)
+            self.publish_crate_poses()
+            self.publish_bot_poses()
+                # print(self.detected_bots)
+
+            # for corner in corners
+
+            self.world_matrix = []  
+            self.pixel_matrix = []
 
             cv.imshow('Detected Markers', undistorted_image)
             cv.waitKey(1)
-
-            self.pixel_matrix = []
-            self.world_matrix = []  
-
             
         except Exception as e:
             self.get_logger().error(f'Error processing image: {str(e)}')
 
-    def publish_crate_poses(self, poses):
+    def publish_crate_poses(self):
         """
         - Convert python pose dictionary -> message (Poses2D)
         - self.crate_poses_pub.publish(msg)
@@ -196,15 +218,17 @@ class PoseDetector(Node):
         # Publish all detected crates
         for detected_id, (x, y, yaw) in self.detected_crates.items():
             crate_pose = Pose2D()
-            crate_pose.id = detected_id
-            crate_pose.x = x
-            crate_pose.y = y
-            crate_pose.yaw = yaw
+            # print(detected_id,x,y,yaw)
+
+            crate_pose.id = int(detected_id)
+            crate_pose.x = np.float64(x)
+            crate_pose.y = np.float64(y)
+            crate_pose.w = np.float64(yaw)
             poses_msg.poses.append(crate_pose)
 
         self.crate_poses_pub.publish(poses_msg)
 
-    def publish_bot_poses(self, poses):
+    def publish_bot_poses(self):
         """
         - Convert python pose dictionary -> message (Poses2D)
         - self.bot_poses_pub.publish(msg)
@@ -217,13 +241,14 @@ class PoseDetector(Node):
         # Publish the message
         poses_msg = Poses2D()
 
-        # Publish all detected crates
-        for detected_id, (x, y, yaw) in self.detected_bot.items():
+        # # Publish all detected crates
+        for detected_id, (x, y, yaw) in self.detected_bots.items():
             bot_pose = Pose2D()
-            bot_pose.id = detected_id
-            bot_pose.x = x
-            bot_pose.y = y
-            bot_pose.yaw = yaw
+            # print(detected_id,x,y,yaw)
+            bot_pose.id = int(detected_id)
+            bot_pose.x = np.float32(x)
+            bot_pose.y = np.float32(y)
+            bot_pose.w = np.float32(yaw)
             poses_msg.poses.append(bot_pose)
 
         self.bot_poses_pub.publish(poses_msg)
