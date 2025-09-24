@@ -17,6 +17,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from hb_interfaces.msg import Pose2D, Poses2D
 from eyantrasim_msgs.msg import Pose
+import matplotlib.pyplot as plt 
 
 class PoseDetector(Node):
     def __init__(self):
@@ -33,7 +34,7 @@ class PoseDetector(Node):
 
         # ---------- TOPICS ----------
         self.image_sub = self.create_subscription(Image, "/camera/image_raw", self.image_callback, 10)
-        self.crate_poses_pub = self.create_publisher(Poses2D, '/crates_pose', 10)
+        self.crate_poses_pub = self.create_publisher(Poses2D, '/crate_pose', 10)
         self.bot_poses_pub = self.create_publisher(Poses2D, '/bot_pose', 10)
         
         # ---------- CAMERA PARAMETERS ----------
@@ -45,16 +46,24 @@ class PoseDetector(Node):
         self.dist_coeffs = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
         
         # ---------- IMAGE MATRICES ----------
-        self.pixel_matrix = []  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
-        self.world_matrix = []  # derive world points matrix [[x1,y1], [x2,y2], ...]
+        self.pixel_matrix = [(446.0, 27.0),(1474.0,26.0),(507.0,1055.0),(1413.0, 1055.0)]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
+        self.world_matrix = [(0, 50),(2438.4, 0),(0, 2438.4),(2438.4, 2438.4)]  # derive world points matrix [[x1,y1], [x2,y2], ...]
         self.H_matrix = None    # compute homography matrix using cv2.findHomography
+        # self.world_coords_dict = {
+        #     1: [[0, 0], [50, 0], [50, 50], [0, 50]],
+        #     3: [[2438.4-50.0, 0], [2438.4, 0], [2438.4, 50], [2438.4-50, 50]],
+        #     5: [[0, 2438.4-50], [50, 2438.4-50], [50, 2438.4], [0, 2438.4]],
+        #     7: [[2438.4-50, 2438.4-50], [2438.4, 2438.4-50],[2438.4-50, 2438.4], [2438.4, 2438.4]]
+        # }
         self.world_coords_dict = {
-            1: [[0, 0], [50, 0], [50, 50], [0, 50]],
-            3: [[2438.4-50, 0], [2438.4, 0], [2438.4, 50], [2438.4-50, 50]],
-            5: [[0, 2438.4-50], [50, 2438.4-50], [50, 2438.4], [0, 2438.4]],
-            7: [[2438.4-50, 2438.4-50], [2438.4-50, 2438.4],[2438.4-50, 2438.4], [2438.4, 2438.4]]
+            1: [0, 50],
+            3: [2438.4, 0],
+            5: [0, 2438.4],
+            7: [2438.4, 2438.4]
         }
+
         self.yaw = None
+        self.y = None
  
         
         # ---------- ARUCO SETUP ----------
@@ -139,20 +148,26 @@ class PoseDetector(Node):
 
         try:
             image = self.bridge.imgmsg_to_cv2(msg)
-
+            # cv.namedWindow('arucos')
+            # cv.resizeWindow('arucos',480,480)
             undistorted_image = cv.undistort(image,self.camera_matrix,self.dist_coeffs)
             image_gray = cv.cvtColor(undistorted_image,cv.COLOR_BGR2GRAY)
 
             corners , ids ,rejected = self.detector.detectMarkers(image_gray)
             # print(corners,ids)
             cv.aruco.drawDetectedMarkers(undistorted_image,corners,ids)
+            for i ,marker_id in enumerate(ids.flatten()):
+                if marker_id in [1,3,5,7]:
+                    # print(f'{marker_id} {corners[i][0]}')
+                    pass
 
             
-            for i, marker_id in enumerate(ids.flatten()):
-                if marker_id in self.world_coords_dict:
-                    for j,corner in enumerate(corners[i][0]):  # each marker has 4 corners
-                        self.pixel_matrix.append([corner[0], corner[1]])
-                        self.world_matrix.append(self.world_coords_dict[marker_id][j])
+            # for i, marker_id in enumerate(ids.flatten()):
+            #     if marker_id in self.world_coords_dict:
+            #         for j,corner in enumerate(corners[i][0]):     # each marker has 4 corners
+            #             # print(corner[0])
+            #             self.pixel_matrix.append([corner[0], corner[1]])
+            #             self.world_matrix.append(self.world_coords_dict[marker_id][j])
                     
             self.pixel_matrix = np.array(self.pixel_matrix, dtype=np.float32)
             self.world_matrix = np.array(self.world_matrix, dtype=np.float32)
@@ -163,8 +178,8 @@ class PoseDetector(Node):
             rvecs , tvecs , _ = cv.aruco.estimatePoseSingleMarkers(corners,self.bots_marker_length,self.camera_matrix,self.dist_coeffs)
 
             for i ,marker_id in enumerate(ids.flatten()):
-                if marker_id in [1,3,5,7]:
-                    continue
+                # if marker_id in [1,3,5,7]:
+                    # continue
 
                 marker_corners = corners[i][0]
                 center_x = np.mean(marker_corners[:,0])
@@ -172,14 +187,36 @@ class PoseDetector(Node):
 
                 x_world, y_world = self.pixel_to_world(center_x, center_y)
                 # print(marker_id,x_world,y_world)
-
+                
                 rmat,jac = cv.Rodrigues(rvecs[i])
                 self.yaw = math.atan2(rmat[1,0],rmat[0,0])
+                # self.yaw = self.yaw % (2 * math.pi)
+                # print(self.yaw)
+                # self.yaw = math.degrees(self.yaw) % 360.0
+                # if self.yaw < 0:
+                #     self.yaw += math.pi
+                #     print(self.yaw)
+                # self.y = self.yaw
                 self.yaw = math.degrees(self.yaw)
+                self.yaw = int(self.yaw)
 
                 if self.yaw < 0:
-                    self.yaw += 360
+                    if abs(self.yaw) < 3:
+                        self.yaw = 0
+                    else: 
+                        self.yaw += 360
+                
+                print(self.yaw)
 
+
+
+                cv.putText(undistorted_image,
+                           (f'x:{x_world:.2f},y:{y_world:.2f},yaw:{self.yaw:.2f}'),
+                           (int(center_x+20),int(center_y-20)),
+                           cv.FONT_HERSHEY_COMPLEX,
+                           0.5,
+                           (0,0,255),2)
+                
                 # print(self.yaw)
                 if marker_id == 9 :
                     self.detected_bots[marker_id] = (x_world, y_world, self.yaw)
@@ -195,9 +232,10 @@ class PoseDetector(Node):
 
             self.world_matrix = []  
             self.pixel_matrix = []
-
-            cv.imshow('Detected Markers', undistorted_image)
-            cv.waitKey(1)
+            # cv.imshow('arucos', undistorted_image)
+            plt.imshow(undistorted_image)
+            plt.show()
+            # cv.waitKey(1)
             
         except Exception as e:
             self.get_logger().error(f'Error processing image: {str(e)}')
@@ -221,9 +259,9 @@ class PoseDetector(Node):
             # print(detected_id,x,y,yaw)
 
             crate_pose.id = int(detected_id)
-            crate_pose.x = np.float64(x)
-            crate_pose.y = np.float64(y)
-            crate_pose.w = np.float64(yaw)
+            crate_pose.x = float(x)
+            crate_pose.y = float(y)
+            crate_pose.w = float(yaw)
             poses_msg.poses.append(crate_pose)
 
         self.crate_poses_pub.publish(poses_msg)
@@ -246,9 +284,9 @@ class PoseDetector(Node):
             bot_pose = Pose2D()
             # print(detected_id,x,y,yaw)
             bot_pose.id = int(detected_id)
-            bot_pose.x = np.float32(x)
-            bot_pose.y = np.float32(y)
-            bot_pose.w = np.float32(yaw)
+            bot_pose.x = float(x)
+            bot_pose.y = float(y)
+            bot_pose.w = float(yaw)
             poses_msg.poses.append(bot_pose)
 
         self.bot_poses_pub.publish(poses_msg)
