@@ -139,14 +139,14 @@ class PoseDetector(Node):
                 self.yaw = math.degrees(self.yaw)
                 self.yaw = int(self.yaw)
 
-                # if self.yaw < 0:
-                #     if abs(self.yaw) < 3:
-                #         self.yaw = 0
-                #     else: 
-                #         self.yaw += 360
-                if self.yaw < 0:    
-                    self.yaw += 360
-                # print(self.yaw)
+                if self.yaw < 0:
+                    if abs(self.yaw) < 3:
+                        self.yaw = 0
+                    else: 
+                        self.yaw += 360
+                # if self.yaw < 0:    
+                #     self.yaw += 360
+                print(self.yaw)
 
 
 
