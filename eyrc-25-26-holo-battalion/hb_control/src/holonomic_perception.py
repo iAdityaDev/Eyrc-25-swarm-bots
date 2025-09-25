@@ -155,7 +155,7 @@ class PoseDetector(Node):
             criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 70, 0.0003)
             self.pixel_matrix = cv2.cornerSubPix(gray, self.pixel_matrix, (10,10), (-1,-1), criteria)
        
-            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 2.0)
+            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 1.0)
 
             # Step 6: Convert center pixel of markers to world coordinates
             # For each detected marker (excluding corner markers):
