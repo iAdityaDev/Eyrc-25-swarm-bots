@@ -39,15 +39,15 @@ class PoseDetector(Node):
         
         # ---------- CAMERA PARAMETERS ----------
         self.camera_matrix = camera_matrix = np.array([
-                                [1030.4891,    0.0,    960.0],
-                                [   0.0,    1030.4891, 540.0],
+                                [1030.4890823364258,    0.0,    960.0],
+                                [   0.0,    1030.489103794098, 540.0],
                                 [   0.0,       0.0,      1.0]
-                            ], dtype=np.float32)
+                            ], dtype=np.float64)
         self.dist_coeffs = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
         
         # ---------- IMAGE MATRICES ----------
-        self.pixel_matrix = [(446.0, 27.0),(1474.0,26.0),(507.0,1055.0),(1413.0, 1055.0)]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
-        self.world_matrix = [(0, 50),(2438.4, 0),(0, 2438.4),(2438.4, 2438.4)]  # derive world points matrix [[x1,y1], [x2,y2], ...]
+        self.pixel_matrix = [[446.0, 27.0],[1474.0,26.0],[445.0,1055.0],[1475.0, 1055.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
+        self.world_matrix = [[0,0],[2438.4, 0],[0, 2438.4],[2438.4, 2438.4]]  # derive world points matrix [[x1,y1], [x2,y2], ...]
         self.H_matrix = None    # compute homography matrix using cv2.findHomography
         # self.world_coords_dict = {
         #     1: [[0, 0], [50, 0], [50, 50], [0, 50]],
@@ -77,74 +77,13 @@ class PoseDetector(Node):
         
 
     def pixel_to_world(self, pixel_x, pixel_y):
-        """
-        - Calculate the H_matrix using: use cv2.findHomography
-        - Convert the pixel coordinates into real world coordinates using: cv2.perspectiveTransform(src_pts, self.H_matrix)
-        """
-        # Implement pixel to world coordinate conversion
-        # Step 1: Ensure H_matrix is computed
-        # Step 2: Create pixel point in correct format for cv2.perspectiveTransform
-        # Step 3: Apply transformation and return world coordinates
+
         center_pixel = np.array([[[pixel_x, pixel_y]]], dtype=np.float32)  # shape (1,1,2)
         world_pt = cv.perspectiveTransform(center_pixel, self.H_matrix)
         x_world, y_world = world_pt[0][0]
         return x_world, y_world
 
     def image_callback(self, msg):
-        """
-        Callback function for the image subscriber.
-        Main Steps:
-        1) Convert ROS Image -> cv image using CvBridge
-        2) Undistort the image using camera intrinsics
-        3) Detect all the markers in the world (cv2.aruco.drawDetectedM arkers)
-        4) Derive the Pixel Matrix and the World Matrix using Corner Markers
-        5) Compute the Homography Matrix (cv2.findHomography)
-        5) Convert center pixel of crates marker and bot markers to world coordinates
-        6) Using OpenCV calculate the yaw angle of each marker (cv2.aruco.estimatePoseSingleMarkers)
-        7) Convert the yaw angle as per the new coordinate system
-        8) Publish the bot pose and crate poses using the given custom message type
-        """
-        # try:
-            # Step 1: Convert ROS Image -> cv image using CvBridge
-            # Use self.bridge.imgmsg_to_cv2() to convert ROS image to OpenCV format
-            
-            # Step 2: Undistort the image using camera intrinsics
-            # Use cv2.undistort() with camera_matrix and dist_coeffs
-            # Convert to grayscale for marker detection
-            
-            # Step 3: Detect all the markers in the world
-            # Use self.detector.detectMarkers() to find ArUco markers
-            # Use cv2.aruco.drawDetectedMarkers() to visualize detected markers
-            
-            # Step 4: Derive the Pixel Matrix and the World Matrix using Corner Markers
-            # Identify corner markers (IDs 1, 3, 5, 7)
-            # Extract their pixel coordinates and map to known world coordinates
-            
-            # Step 5: Compute the Homography Matrix
-            # Use cv2.findHomography() with pixel and world points
-            
-            # Step 6: Convert center pixel of markers to world coordinates
-            # For each detected marker (excluding corner markers):
-            #       - Calculate center pixel coordinate
-            #       - Use pixel_to_world() to convert to world coordinates
-            
-            # Step 7: Calculate yaw angle of each marker
-            # Use cv2.aruco.estimatePoseSingleMarkers() or any other method to get rotation vectors
-            # If you are going ahead with it, convert rotation vector to rotation matrix using cv2.Rodrigues()
-            # Extract yaw angle from rotation matrix
-            
-            # Step 8: Separate and publish poses
-            # Create separate dictionaries for bot_poses and crate_poses
-            # Call publish_crate_poses() and publish_bot_poses()
-            
-            # Display the image with detected markers
-            # cv2.imshow('Detected Markers', undistorted_image)
-            # cv2.waitKey(1)
-            
-        #     pass
-            
-        # except Exception as e:
-        #     self.get_logger().error(f'Error processing image: {str(e)}')
 
         try:
             image = self.bridge.imgmsg_to_cv2(msg)
@@ -157,7 +96,7 @@ class PoseDetector(Node):
             # print(corners,ids)
             cv.aruco.drawDetectedMarkers(undistorted_image,corners,ids)
             for i ,marker_id in enumerate(ids.flatten()):
-                if marker_id in [1,3,5,7]:
+                # if marker_id in [1,3,5,7]:
                     # print(f'{marker_id} {corners[i][0]}')
                     pass
 
@@ -178,8 +117,8 @@ class PoseDetector(Node):
             rvecs , tvecs , _ = cv.aruco.estimatePoseSingleMarkers(corners,self.bots_marker_length,self.camera_matrix,self.dist_coeffs)
 
             for i ,marker_id in enumerate(ids.flatten()):
-                # if marker_id in [1,3,5,7]:
-                    # continue
+                if marker_id in [1,3,5,7]:
+                    continue
 
                 marker_corners = corners[i][0]
                 center_x = np.mean(marker_corners[:,0])
@@ -200,13 +139,14 @@ class PoseDetector(Node):
                 self.yaw = math.degrees(self.yaw)
                 self.yaw = int(self.yaw)
 
-                if self.yaw < 0:
-                    if abs(self.yaw) < 3:
-                        self.yaw = 0
-                    else: 
-                        self.yaw += 360
-                
-                print(self.yaw)
+                # if self.yaw < 0:
+                #     if abs(self.yaw) < 3:
+                #         self.yaw = 0
+                #     else: 
+                #         self.yaw += 360
+                if self.yaw < 0:    
+                    self.yaw += 360
+                # print(self.yaw)
 
 
 
@@ -228,29 +168,20 @@ class PoseDetector(Node):
             self.publish_bot_poses()
                 # print(self.detected_bots)
 
-            # for corner in corners
+            # # for corner in corners
 
-            self.world_matrix = []  
-            self.pixel_matrix = []
+            # self.world_matrix = []  
+            # self.pixel_matrix = []
             # cv.imshow('arucos', undistorted_image)
-            plt.imshow(undistorted_image)
-            plt.show()
+            # plt.imshow(undistorted_image)
+            # plt.show()
             # cv.waitKey(1)
             
         except Exception as e:
             self.get_logger().error(f'Error processing image: {str(e)}')
 
     def publish_crate_poses(self):
-        """
-        - Convert python pose dictionary -> message (Poses2D)
-        - self.crate_poses_pub.publish(msg)
-        """
-        # Create Poses2D message
-        # For each pose in poses list:
-        #       - Create Pose2D message
-        #       - Set id, x, y, w fields
-        #       - Append to poses message
-        # Publish the message
+
         poses_msg = Poses2D()
 
         # Publish all detected crates
@@ -267,16 +198,7 @@ class PoseDetector(Node):
         self.crate_poses_pub.publish(poses_msg)
 
     def publish_bot_poses(self):
-        """
-        - Convert python pose dictionary -> message (Poses2D)
-        - self.bot_poses_pub.publish(msg)
-        """
-        # Create Poses2D message
-        # For each pose in poses list:
-        #       - Create Pose2D message
-        #       - Set id, x, y, w fields
-        #       - Append to poses message
-        # Publish the message
+
         poses_msg = Poses2D()
 
         # # Publish all detected crates
