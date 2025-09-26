@@ -168,6 +168,7 @@ class PoseDetector(Node):
             self.publish_bot_poses()
                 # print(self.detected_bots)
 
+
             # # for corner in corners
 
             # self.world_matrix = []  
