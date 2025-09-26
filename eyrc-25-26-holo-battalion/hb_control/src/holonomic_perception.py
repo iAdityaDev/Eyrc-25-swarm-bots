@@ -139,11 +139,11 @@ class PoseDetector(Node):
                 self.yaw = math.degrees(self.yaw)
                 self.yaw = int(self.yaw)
 
-                if self.yaw < 0:
-                    if abs(self.yaw) < 3:
-                        self.yaw = 0
-                    else: 
-                        self.yaw += 360
+                # if self.yaw < 0:
+                #     if abs(self.yaw) < 3:
+                #         self.yaw = 0
+                #     else: 
+                #         self.yaw += 360
                 # if self.yaw < 0:    
                 #     self.yaw += 360
                 print(self.yaw)
@@ -158,13 +158,14 @@ class PoseDetector(Node):
                            (0,0,255),2)
                 
                 # print(self.yaw)
-                if marker_id == 9 :
-                    self.detected_bots[marker_id] = (x_world, y_world, self.yaw)
-                else:
-                    self.detected_crates[marker_id] = (x_world, y_world, self.yaw)
+                # if marker_id == 9 :
+                #     self.detected_bots[marker_id] = (x_world, y_world, self.yaw)
+                # else:
+                #     self.detected_crates[marker_id] = (x_world, y_world, self.yaw)
+                self.detected_bots[marker_id] = (x_world, y_world, self.yaw)
 
             # print(self.detected_crates)
-            self.publish_crate_poses()
+            # self.publish_crate_poses()
             self.publish_bot_poses()
                 # print(self.detected_bots)
 

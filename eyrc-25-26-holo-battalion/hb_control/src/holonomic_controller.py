@@ -1,75 +1,72 @@
 #!/usr/bin/env python3
-
-'''
-This Python file runs a ROS 2 node of name holonomic_pid_controller which holds the position of a holonomic robot
-and drives it through a series of predefined goals using PID controllers on [x, y, θ].
-
-This node publishes and subscribes to the following topics:
-
-        PUBLICATIONS                               SUBSCRIPTIONS
-        /forward_velocity_controller/commands      /bot_pose
-
-Instead of defining separate variables for each PID axis, lists/dictionaries are used.
-For example: pid_params['x'], pid_params['y'], pid_params['theta'], etc.
-
-Code modularity and clarity are maintained to make tuning and extension easier.
-'''
-
-# ---------------------- Import Required Libraries ----------------------------
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64MultiArray
-# import hb_interface messages
+from geometry_msgs.msg import Twist
+from eyantrasim_msgs.msg import Pose
+from hb_interfaces.msg import Pose2D, Poses2D
 import numpy as np
 import math
 
-
-# ---------------------- PID Controller Class --------------------------------
 class PID:
     def __init__(self, kp, ki, kd, max_out=1.0):
         self.kp = kp
         self.ki = ki
         self.kd = kd
-        self.max_out = max_out
+        self.max_out = max_out   # velocity cap 
         self.integral = 0.0
         self.prev_error = 0.0
 
     def compute(self, error, dt):
-#-----------------------------PID Compute Steps--------------------------------------------------------------
-        # 1. Accumulate the error over time for the Integral term
-        # 2. Compute the change in error for the Derivative term
-        # 3. Calculate the PID output:
-        # 4. Store the current error for use in the next iteration
-        # 5. Limit (clip) the output between [-max_out, +max_out] to avoid unsafe velocities
-#------------------------------------------------------------------------------------------------------------
-        return 
-    
+        # print(error,dt)
+        self.integral += error*dt
+        derivative = (error-self.prev_error)/dt
+        # print(self.integral)
+        output = (self.kp * error) + (self.ki * self.integral) + (self.kd * derivative)
+        self.prev_error = error
+        output = max(min(output, self.max_out), -self.max_out)
+        # print(error,derivative,self.integral,output)
+
+        return output
     
     def reset(self):
         self.integral = 0.0
         self.prev_error = 0.0
 
 
-# ---------------------- Main Node Class -------------------------------------
 class HolonomicPIDController(Node):
     def __init__(self):
         super().__init__('holonomic_pid_controller')  # initializing ros node
+        self.get_logger().info('HolonomicPIDController is created')
 
-        # ---------------- Robot Parameters ----------------
-        # 1. Robot ID(s)
-        # 2. Current pose of the robot:
-        #    - Updated from the /bot_pose topic in the callback function.
-        #    - Stores [x, y, θ] information for the active robot.
-        # 3. Goal tracking index
-        # 4. Timing information:
-        #    - Used to calculate the time difference (dt) between control loop iterations.
-        # 5. Threshold for goal completion:
-        #    - Defines the acceptable error tolerance for x, y, and θ.
-        #    - Example: if error < 5 units → goal considered reached.
+        self.bot_pose = self.create_subscription(Poses2D, 
+                                                 "/bot_pose", 
+                                                 self.pose_cb,
+                                                 10)
+        
+        self.publisher = self.create_publisher(Float64MultiArray, 
+                                               '/forward_velocity_controller/commands',
+                                               10)
 
-        # ---------------- Goal Definitions ----------------
+        self.current_pose_bot = None
+        self.last_time = 0.0
+        self.max_vel = 1.5
+        self.goal_reached = False
+        self.current_goal_wp = 0
+        self.alpha1 = math.radians(30+45)
+        self.alpha2 = math.radians(150+45)
+        self.alpha3 = math.radians(270+45)
+        self.target_x = 0.0
+        self.target_y = 0.0
+        self.target_yaw = 0.0
 
-        # List of waypoints [(x, y, yaw_deg)]
+        self.A = np.array([
+            [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
+            [np.sin(self.alpha1 + np.pi/2), np.sin(self.alpha2 + np.pi/2), np.sin(self.alpha3 + np.pi/2)],
+            [1, 1, 1]
+        ])
+
+
         self.goals = [
             (700, 800, 0),
             (700, 1400, 0),
@@ -77,89 +74,69 @@ class HolonomicPIDController(Node):
             (1500, 800, 0),
             (700, 800, 0),
         ]
+        self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
 
-        #----------------DO NOT CHNAGE----------------------
 
-        # ---------------- PID Parameters ----------------
         self.pid_params = {
-            'x': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'y': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 0.05, 'ki': 0.003, 'kd': 0.005, 'max_out': self.max_vel},
+            'y': {'kp': 1.0, 'ki': 1.00, 'kd': 1.0, 'max_out': self.max_vel},
+            'theta': {'kp': 1.0, 'ki': 1.00, 'kd': 1.0, 'max_out': self.max_vel * 2}
         }
 
-        # Initialize PIDs
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
-        self.pid_theta = PID(**self.pid_params['theta'])
+        self.pid_yaw = PID(**self.pid_params['theta'])
 
-        # ---------------- ROS 2 Publishers & Subscribers ----------------
-        
-        # Write a subscriber for /bot_pose
 
-        self.publisher = self.create_publisher(
-            Float64MultiArray, '/forward_velocity_controller/commands', 10
-        )
-        
-        # ---------------- Timer for Control Loop ----------------
-        self.timer = self.create_timer(0.03, self.control_cb)  # ~30ms = 33 Hz
+        self.timer = self.create_timer(0.03, self.control_cb) 
 
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
 
-    # ---------------- Subscriber Callback ----------------
     def pose_cb(self, msg):
-        """
-        Callback function for /bot_pose topic.
-        This function is executed each time a message is received.
+        for self.current_pose_bot in msg.poses:
+            self.current_pose_bot_id = self.current_pose_bot.id
+            self.current_pose_bot_x = self.current_pose_bot.x
+            self.current_pose_bot_y = self.current_pose_bot.y
+            self.current_pose_bot_yaw = self.current_pose_bot.w
 
-        Steps:
-        1. Iterate through all poses in the incoming message.
-        2.  Update self.current_pose with this robot’s pose.
-        """
-
-    # ---------------- Control Loop ----------------
     def control_cb(self):
 
-        """
-        Control loop callback executed periodically by the ROS 2 timer.
+        if self.current_pose_bot is None:
+            return
 
-        Main Steps:
-        1. Check if the current pose is available; if not, exit.
-        2. Compute the time difference (dt) since the last control cycle.
-        3. Get the current robot pose (x, y, θ).
-        4. If all goals are completed → stop the robot.
-        5. Select the current goal (x, y, θ) from the goals list.
-        6. Compute errors in x, y, and θ between current pose and goal.
-        7. Use PID controllers to calculate required body velocities [vx, vy, ω].
-        8. Convert body velocities into individual wheel velocities.
-        9. Limit (clip) wheel velocities within safe bounds.
-        10. Publish the wheel velocities to the motor controller.
-        11. Check if the goal is reached:
-              - If yes → update goal index, reset PIDs, and move to the next goal.
-        """
-
-
-        # Time delta
         now = self.get_clock().now()
-        dt = (now - self.last_time).nanoseconds / 1e9
+        dt = (now.nanoseconds - self.last_time) / 1e9
         if dt <= 0:
             return
-        self.last_time = now
+        self.last_time = now.nanoseconds
 
-        # Current robot pose
+        if not self.goal_reached:
+            error_x = self.target_x-self.current_pose_bot_x
+            error_y = self.target_y-self.current_pose_bot_y
+            error_yaw = self.target_yaw-self.current_pose_bot_yaw
+            pid_x = self.pid_x.compute(error_x,dt)
+            pid_y = self.pid_y.compute(error_y,dt)
+            pid_yaw = self.pid_yaw.compute(error_yaw,dt)
 
-        # If all goals are reached → stop
+            if error_x < 5 and error_y<5:
+                self.goal_reached = True
+            
+            pose = np.array([pid_x,pid_y,pid_yaw])
+            s_linalg = np.linalg.solve(self.A, pose)
 
-        # Current target goal
+            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2]]
+            self.publish_wheel_velocities(wheel_velocities)
 
-        # Errors
+        print(self.goal_reached)
 
-        # PID outputs
-
-        # Convert to wheel velocities (custom equations)
-
-        # Publish wheel velocities
-
+        if self.goal_reached:
+            self.get_logger().info('changign to next goal')
+            self.goal_reached = False
+            self.current_goal_wp += 1
+            if self.current_goal_wp == 4:
+                self.get_logger().info('all th points reached')
+            self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
 
         # Goal check
 
@@ -180,7 +157,6 @@ def main(args=None):
     rclpy.spin(controller)
     controller.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
