@@ -62,6 +62,17 @@ class PoseDetector(Node):
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.aruco_params = cv2.aruco.DetectorParameters()
 
+        
+        # self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        # self.aruco_params.minMarkerPerimeterRate = 0.005
+        # self.aruco_params.adaptiveThreshWinSizeMax = 43   # increased
+
+        # self.aruco_params.maxMarkerPerimeterRate = 6.0
+
+        # self.aruco_params.polygonalApproxAccuracyRate = 0.11
+
+
+
 
 
         self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
@@ -123,6 +134,12 @@ class PoseDetector(Node):
 
             
             gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+           
+ 
+
+
 
 
             
@@ -133,6 +150,7 @@ class PoseDetector(Node):
             # Use cv2.aruco.drawDetectedMarkers() to visualize detected markers
 
             corners, ids, rejected = self.detector.detectMarkers(gray)
+            
             if ids is not None:
                cv2.aruco.drawDetectedMarkers(undistorted, corners, ids)
             
@@ -155,7 +173,7 @@ class PoseDetector(Node):
             criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 70, 0.0003)
             self.pixel_matrix = cv2.cornerSubPix(gray, self.pixel_matrix, (10,10), (-1,-1), criteria)
        
-            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 1.0)
+            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 0.5)
 
             # Step 6: Convert center pixel of markers to world coordinates
             # For each detected marker (excluding corner markers):
@@ -212,7 +230,7 @@ class PoseDetector(Node):
 
                     cv2.putText(
                         undistorted,
-                        f"{yaw_deg:.2f} deg",
+                        f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw_deg:.2f} deg",
                         (int(center[0]) + 10, int(center[1])),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.6,
