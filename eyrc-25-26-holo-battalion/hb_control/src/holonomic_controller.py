@@ -53,9 +53,9 @@ class HolonomicPIDController(Node):
         self.max_vel = 2.0
         self.goal_reached = False
         self.current_goal_wp = 0
-        self.alpha1 = math.radians(30+45)
-        self.alpha2 = math.radians(150+45)
-        self.alpha3 = math.radians(270+45)
+        self.alpha1 = math.radians(30)
+        self.alpha2 = math.radians(150)
+        self.alpha3 = math.radians(270)
         self.target_x = 0.0
         self.target_y = 0.0
         self.target_yaw = 0.0
@@ -79,8 +79,8 @@ class HolonomicPIDController(Node):
 
 
         self.pid_params = {
-            'x': {'kp': 0.5, 'ki': 0.00, 'kd': 0.3, 'max_out': self.max_vel},
-            'y': {'kp': 0.5, 'ki': 0.00, 'kd': 0.3, 'max_out': self.max_vel},
+            'x': {'kp': 0.8, 'ki': 0.00, 'kd': 0.6, 'max_out': self.max_vel},
+            'y': {'kp': 0.8, 'ki': 0.00, 'kd': 0.6, 'max_out': self.max_vel},
             'theta': {'kp': 1.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
@@ -115,19 +115,23 @@ class HolonomicPIDController(Node):
         if not self.goal_reached:
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
-            print(error_x,error_y)
             error_yaw = self.target_yaw-self.current_pose_bot_yaw
+            print(error_x,error_y,error_yaw)
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
             pid_yaw = self.pid_yaw.compute(error_yaw,dt)
 
-            if abs(error_x) < 10 and abs(error_y)< 10:
+
+            if abs(error_x) < 15 and abs(error_y)< 15 and abs(error_yaw)<0.1:
                 self.goal_reached = True
             
             pose = np.array([pid_x,pid_y,pid_yaw])
             s_linalg = np.linalg.solve(self.A, pose)
 
             wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2]]
+            #  1 blue 
+            # 2 red 
+            # 3 green
             self.publish_wheel_velocities(wheel_velocities)
 
         print(self.goal_reached)

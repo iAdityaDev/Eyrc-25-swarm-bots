@@ -129,6 +129,10 @@ class PoseDetector(Node):
                 
                 rmat,jac = cv.Rodrigues(rvecs[i])
                 self.yaw = math.atan2(rmat[1,0],rmat[0,0])
+                while self.yaw > math.pi:
+                    self.yaw -= 2 * math.pi    
+                while self.yaw < -math.pi:
+                    self.yaw += 2 * math.pi
                 # self.yaw = self.yaw % (2 * math.pi)
                 # print(self.yaw)
                 # self.yaw = math.degrees(self.yaw) % 360.0
@@ -173,10 +177,10 @@ class PoseDetector(Node):
 
             # self.world_matrix = []  
             # self.pixel_matrix = []
-            # cv.imshow('arucos', undistorted_image)
+            cv.imshow('win',undistorted_image)
             # plt.imshow(undistorted_image)
             # plt.show()
-            # cv.waitKey(1)
+            cv.waitKey(1)
             
         except Exception as e:
             self.get_logger().error(f'Error processing image: {str(e)}')
