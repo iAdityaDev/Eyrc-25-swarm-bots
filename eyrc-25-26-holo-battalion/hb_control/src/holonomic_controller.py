@@ -50,7 +50,7 @@ class HolonomicPIDController(Node):
 
         self.current_pose_bot = None
         self.last_time = 0.0
-        self.max_vel = 1.5
+        self.max_vel = 2.0
         self.goal_reached = False
         self.current_goal_wp = 0
         self.alpha1 = math.radians(30+45)
@@ -74,13 +74,14 @@ class HolonomicPIDController(Node):
             (1500, 800, 0),
             (700, 800, 0),
         ]
+        # print(type(self.goals),self.goals[3])
         self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
 
 
         self.pid_params = {
-            'x': {'kp': 0.05, 'ki': 0.003, 'kd': 0.005, 'max_out': self.max_vel},
-            'y': {'kp': 1.0, 'ki': 1.00, 'kd': 1.0, 'max_out': self.max_vel},
-            'theta': {'kp': 1.0, 'ki': 1.00, 'kd': 1.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 0.5, 'ki': 0.00, 'kd': 0.3, 'max_out': self.max_vel},
+            'y': {'kp': 0.5, 'ki': 0.00, 'kd': 0.3, 'max_out': self.max_vel},
+            'theta': {'kp': 1.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -114,12 +115,13 @@ class HolonomicPIDController(Node):
         if not self.goal_reached:
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
+            print(error_x,error_y)
             error_yaw = self.target_yaw-self.current_pose_bot_yaw
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
             pid_yaw = self.pid_yaw.compute(error_yaw,dt)
 
-            if error_x < 5 and error_y<5:
+            if abs(error_x) < 10 and abs(error_y)< 10:
                 self.goal_reached = True
             
             pose = np.array([pid_x,pid_y,pid_yaw])
@@ -136,7 +138,11 @@ class HolonomicPIDController(Node):
             self.current_goal_wp += 1
             if self.current_goal_wp == 4:
                 self.get_logger().info('all th points reached')
+            print(self.current_goal_wp)
             self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
+            self.pid_x.reset()
+            self.pid_y.reset()
+            self.pid_yaw.reset()
 
         # Goal check
 
