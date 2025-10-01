@@ -129,10 +129,7 @@ class PoseDetector(Node):
                 
                 rmat,jac = cv.Rodrigues(rvecs[i])
                 self.yaw = math.atan2(rmat[1,0],rmat[0,0])
-                while self.yaw > math.pi:
-                    self.yaw -= 2 * math.pi    
-                while self.yaw < -math.pi:
-                    self.yaw += 2 * math.pi
+                
                 # self.yaw = self.yaw % (2 * math.pi)
                 # print(self.yaw)
                 # self.yaw = math.degrees(self.yaw) % 360.0

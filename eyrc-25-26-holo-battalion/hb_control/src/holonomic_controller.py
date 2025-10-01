@@ -24,7 +24,7 @@ class PID:
         # print(self.integral)
         output = (self.kp * error) + (self.ki * self.integral) + (self.kd * derivative)
         self.prev_error = error
-        output = max(min(output, self.max_out), -self.max_out)
+        # output = max(min(output, self.max_out), -self.max_out)
         # print(error,derivative,self.integral,output)
 
         return output
@@ -79,8 +79,8 @@ class HolonomicPIDController(Node):
 
 
         self.pid_params = {
-            'x': {'kp': 0.8, 'ki': 0.00, 'kd': 0.6, 'max_out': self.max_vel},
-            'y': {'kp': 0.8, 'ki': 0.00, 'kd': 0.6, 'max_out': self.max_vel},
+            'x': {'kp': 0.01, 'ki': 0.00, 'kd': 0.0095, 'max_out': self.max_vel},
+            'y': {'kp': 0.01, 'ki': 0.00, 'kd': 0.0095, 'max_out': self.max_vel},
             'theta': {'kp': 1.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
@@ -116,13 +116,18 @@ class HolonomicPIDController(Node):
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
             error_yaw = self.target_yaw-self.current_pose_bot_yaw
+            while error_yaw > math.pi:
+                error_yaw -= 2 * math.pi    
+            while error_yaw < -math.pi:
+                error_yaw += 2 * math.pi
             print(error_x,error_y,error_yaw)
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
             pid_yaw = self.pid_yaw.compute(error_yaw,dt)
 
+            print(f'pid_x {pid_x} pid_y {pid_y} pid_yaw {pid_yaw}')
 
-            if abs(error_x) < 15 and abs(error_y)< 15 and abs(error_yaw)<0.1:
+            if abs(error_x) < 10 and abs(error_y)< 10 and abs(error_yaw)<0.2:
                 self.goal_reached = True
             
             pose = np.array([pid_x,pid_y,pid_yaw])
@@ -134,10 +139,8 @@ class HolonomicPIDController(Node):
             # 3 green
             self.publish_wheel_velocities(wheel_velocities)
 
-        print(self.goal_reached)
-
         if self.goal_reached:
-            self.get_logger().info('changign to next goal')
+            self.get_logger().info(f'changign to next goal{self.current_goal_wp}')
             self.goal_reached = False
             self.current_goal_wp += 1
             if self.current_goal_wp == 4:
