@@ -70,21 +70,28 @@ class HolonomicPIDController(Node):
         #     [np.sin(self.alpha1), np.sin(self.alpha2), np.sin(self.alpha3)],
         #     [1, 1, 1]
         # ])
+        # self.goals = [
+        #     (700, 800, 0),
+        #     (700, 1400, 0),
+        #     (1500, 1400, 0),
+        #     (1500, 800, 0),
+        #     (700, 800, 0),
+        # ]
         self.goals = [
-            (700, 800, 0),
-            (700, 1400, 0),
-            (1500, 1400, 0),
-            (1500, 800, 0),
-            (700, 800, 0),
+            (820, 920, 0),
+            (820, 1520, 0),
+            (1620, 1520, 0),
+            (1620, 920, 0),
+            (820, 920, 0),
         ]
         # print(type(self.goals),self.goals[3])
         self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
 
 
         self.pid_params = {
-            'x': {'kp': 0.08, 'ki': 0.00, 'kd': 0.06, 'max_out': self.max_vel},
-            'y': {'kp': 0.08, 'ki': 0.00, 'kd': 0.06, 'max_out': self.max_vel},
-            'theta': {'kp': 0.1, 'ki': 0.00, 'kd': 0.08, 'max_out': self.max_vel * 2}
+            'x': {'kp': 0.019, 'ki': 0.00, 'kd': 0.008, 'max_out': self.max_vel},
+            'y': {'kp': 0.019, 'ki': 0.00, 'kd': 0.008, 'max_out': self.max_vel},
+            'theta': {'kp': 0.25, 'ki': 0.00, 'kd': 0.2, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -133,7 +140,7 @@ class HolonomicPIDController(Node):
             self.pid_yaw.print()
 
 
-            if abs(error_x) < 15 and abs(error_y)< 15 and abs(error_yaw)<0.1:
+            if abs(error_x) < 2 and abs(error_y)< 2 and abs(error_yaw)<0.40:
                 self.goal_reached = True
             
 
