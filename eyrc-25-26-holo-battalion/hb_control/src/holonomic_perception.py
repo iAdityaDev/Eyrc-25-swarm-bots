@@ -101,6 +101,16 @@ class PoseDetector(Node):
   
         x_world, y_world = world_pt[0][0]
 
+        if y_world>200 and y_world<800:
+            y_world=y_world+10
+        if y_world>1000 and y_world<2400:
+            y_world=y_world-10    
+        if x_world>200 and x_world<1100:
+            x_world=x_world+10
+        if x_world>1250 and x_world<2400:
+            x_world=x_world-10
+
+
         return x_world, y_world
 
     def image_callback(self, msg):
