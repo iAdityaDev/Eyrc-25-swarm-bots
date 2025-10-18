@@ -144,8 +144,12 @@ class PoseDetector(Node):
 
             
             gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(4,4))
             gray = clahe.apply(gray)
+
+            # 3️⃣ Apply slight Gaussian blur to reduce noise
+            gray = cv2.GaussianBlur(gray, (3,3), 0)
+
            
  
 
@@ -248,7 +252,7 @@ class PoseDetector(Node):
                         2
                     )
 
-                    if marker_id==9:
+                    if marker_id==0:
                         bot_pose={
                         marker_id: (x_w, y_w, yaw_deg),
                         }
