@@ -69,7 +69,7 @@ class HolonomicPIDController(Node):
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
             [np.sin(self.alpha1 + np.pi/2), np.sin(self.alpha2 + np.pi/2), np.sin(self.alpha3 + np.pi/2)],
-            [1, 1, 1]
+            [0.185,0.185,0.185]
         ])
         # self.A = np.array([
         #     [np.cos(self.alpha1), np.cos(self.alpha2), np.cos(self.alpha3)],
@@ -94,9 +94,9 @@ class HolonomicPIDController(Node):
 
 
         self.pid_params = {
-            'x': {'kp': 0.15, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.15, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 0.90, 'ki': 0.00, 'kd': 0.10, 'max_out': self.max_vel * 2}
+            'x': {'kp': 0.55, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'y': {'kp': 0.55, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'theta': {'kp': 0.25, 'ki': 0.00, 'kd': 0.25, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -161,7 +161,7 @@ class HolonomicPIDController(Node):
             # self.pid_yaw.print()
 
 
-            if abs(error_x) < 2 and abs(error_y)< 2 and abs(error_yaw)<0.40:
+            if abs(error_x) < 15 and abs(error_y)< 15 and abs(error_yaw)<0.10:
                 self.goal_reached = True
             
 

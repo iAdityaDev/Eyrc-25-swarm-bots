@@ -71,12 +71,15 @@ class PoseDetector(Node):
 
         # self.aruco_params.polygonalApproxAccuracyRate = 0.11
 
-
-
-
-
         self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
-        
+
+        self.x_real = np.array([1218.84,298.2,498.2, 1219.2, 1219.2,819.2]) 
+        self.x_est = np.array([1219.2,274.46,478.98, 1218.86, 1218.85, 808.45]) 
+        self.y_real = np.array([205.0, 1031.2, 831.2, 1219.2, 719.2, 1019.2]) 
+        self.y_est = np.array([169.4, 1027.31, 821.49, 1219.41, 707.28, 1014.27])
+        self.a_x , self.b_x = np.polyfit(self.x_est,self.x_real,1)
+        self.a_y , self.b_y = np.polyfit(self.y_est,self.y_real,1)
+
         self.get_logger().info('PoseDetector initialized')
 
     def pixel_to_world(self, pixel_x, pixel_y):
@@ -100,6 +103,9 @@ class PoseDetector(Node):
 
   
         x_world, y_world = world_pt[0][0]
+
+        x_world = self.a_x*x_world + self.b_x
+        y_world = self.a_y*y_world + self.b_y
 
         return x_world, y_world
 
