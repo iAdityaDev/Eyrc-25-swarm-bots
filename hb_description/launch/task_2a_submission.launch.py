@@ -81,11 +81,11 @@ def generate_launch_description():
             executable='hb_bridge', output='screen')
 
     hb_perception_node = Node(
-        package='hb_description',
-        executable='/usr/bin/python3',
+        package='hb_control',
+        executable='holonomic_perception.py',
         name='hb_perception',
         output='screen',
-        arguments=[os.path.join(get_package_share_directory('hb_description'), 'config', 'holonomic_perception.py')]
+        arguments=[os.path.join(get_package_share_directory('hb_control'), 'src', 'holonomic_perception.py')]
     )
 
     autoevaluate = ExecuteProcess(
@@ -106,7 +106,7 @@ def generate_launch_description():
     ld.add_action(gz_sim_bridge)
     ld.add_action(robot_state_publisher_cmd)
     ld.add_action(spawn_holonomic_bot)
-    # ld.add_action(hb_perception_node)
+    ld.add_action(hb_perception_node)
     ld.add_action(hb_bridge)
     ld.add_action(box_spawner)
     ld.add_action(autoevaluate)
