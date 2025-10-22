@@ -154,6 +154,8 @@ class HolonomicPIDController(Node):
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
             error_yaw = self.target_yaw-self.current_pose_bot_yaw
+            correction = -1.03 * self.current_pose_crate_yaw + 0.8
+            error_yaw += correction
             dist_error = math.sqrt(error_x**2 + error_y**2)
 
             # error_yaw = math.atan2(math.sin(error_yaw), math.cos(error_yaw))
@@ -183,9 +185,9 @@ class HolonomicPIDController(Node):
             # if error_y < 165:
             #     pid_y_robot = 0.0    
 
-            if dist_error< 165 and abs(error_yaw) <0.001:
+            if dist_error< 155 and abs(error_yaw) <0.001:
                 self.goal_reached = True
-            elif dist_error < 165:
+            elif dist_error < 155:
                 pid_x_robot = 0.0 
                 pid_y_robot = 0.0 
 
