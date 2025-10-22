@@ -7,9 +7,10 @@ from hb_interfaces.msg import BotCmdArray , BotCmd
 from linkattacher_msgs.srv import AttachLink , DetachLink
 import numpy as np
 import math
+import time
 
 # ros2 service call /attach_link linkattacher_msgs/srv/AttachLink "{
-#   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_18\"}'
+#   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_17\"}'
 # }"
 
 
@@ -197,7 +198,7 @@ class HolonomicPIDController(Node):
             if self.current_goal_wp < 2 :
                 if dist_error< 155 and abs(error_yaw) <0.07:
                     self.goal_reached = True
-                if dist_error < 155:
+                if dist_error < 145:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0 
             else :
@@ -212,9 +213,55 @@ class HolonomicPIDController(Node):
             # 2 red 
             # 3 green
         if self.goal_reached:
+
+            if self.current_goal_wp == 0:
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
+                time.sleep(4.0)
+                req = AttachLink.Request()
+                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_blue_44", "link2_name": "box_link_44"}'
+
+                self.get_logger().info('Attach request sent, waiting for response...')
+                future = self.attach_client.call_async(req)
+                rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
+
+                if future.done() and future.result() is not None:
+                    response = future.result()
+                    if response.success:
+                        self.get_logger().info(f"Attachment successful: {response.message}")
+                    else:
+                        self.get_logger().error(f"Attachment failed: {response.message}")
+                else:
+                    self.get_logger().error('Attach service call timed out or did not respond.')
+
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,45.0,45.0])
+                time.sleep(4.0)
+
+            if self.current_goal_wp == 1:
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
+                time.sleep(4.0)
+                req = DetachLink.Request()
+                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_blue_44", "link2_name": "box_link_44"}'
+
+                self.get_logger().info('Dettach request sent, waiting for response...')
+                future = self.detach_client.call_async(req)
+                rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
+
+                if future.done() and future.result() is not None:
+                    response = future.result()
+                    if response.success:
+                        self.get_logger().info(f"Attachment successful: {response.message}")
+                    else:
+                        self.get_logger().error(f"Attachment failed: {response.message}")
+                else:
+                    self.get_logger().error('Attach service call timed out or did not respond.')
+
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,0.0,180.0])
+                time.sleep(4.0)
+
             self.get_logger().info('changign to next goal')
             self.goal_reached = False
             self.current_goal_wp += 1
+            
             print(self.current_goal_wp)
             if self.current_goal_wp ==3:
                 self.get_logger().info('all th points reached')
