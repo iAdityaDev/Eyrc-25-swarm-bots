@@ -7,6 +7,11 @@ from hb_interfaces.msg import BotCmdArray , BotCmd
 import numpy as np
 import math
 
+# ros2 service call /attach_link linkattacher_msgs/srv/AttachLink "{
+#   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_18\"}'
+# }"
+
+
 class PID:
     def __init__(self, kp, ki, kd, max_out=1.0):
         self.kp = kp
@@ -65,6 +70,7 @@ class HolonomicPIDController(Node):
         self.target_x = 0.0
         self.target_y = 0.0
         self.target_yaw = 0.0
+        self.docking_zone = [1218.0,205.0,0]
 
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
@@ -94,9 +100,9 @@ class HolonomicPIDController(Node):
 
 
         self.pid_params = {
-            'x': {'kp': 0.55, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.55, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 0.25, 'ki': 0.00, 'kd': 0.25, 'max_out': self.max_vel * 2}
+            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -122,11 +128,13 @@ class HolonomicPIDController(Node):
             self.current_pose_crate_x = self.current_pose_crate.x
             self.current_pose_crate_y = self.current_pose_crate.y
             self.current_pose_crate_yaw = self.current_pose_crate.w
+            # self.current_pose_crate_yaw = 0.0
             # print(self.current_pose_crate_id,self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw)
         
         if self.goals == None:
             self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
+            
 
     def control_cb(self):
 
@@ -146,6 +154,8 @@ class HolonomicPIDController(Node):
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
             error_yaw = self.target_yaw-self.current_pose_bot_yaw
+            dist_error = math.sqrt(error_x**2 + error_y**2)
+
             # error_yaw = math.atan2(math.sin(error_yaw), math.cos(error_yaw))
             while error_yaw > math.pi:
                 error_yaw -= 2 * math.pi    
@@ -159,13 +169,28 @@ class HolonomicPIDController(Node):
             # self.pid_x.print()
             # self.pid_y.print()
             # self.pid_yaw.print()
-
-
-            if abs(error_x) < 15 and abs(error_y)< 15 and abs(error_yaw)<0.10:
-                self.goal_reached = True
+            cos_yaw = math.cos(-self.current_pose_bot_yaw)
+            sin_yaw = math.sin(-self.current_pose_bot_yaw)
             
+            pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+            pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
 
-            pose = np.array([pid_x,pid_y,pid_yaw])
+            # if abs(error_yaw) > 0.4:
+            #     pid_x_robot = 0.0
+            #     pid_y_robot = 0.0 
+            # if error_x < 165:
+            #     pid_x_robot = 0.0 
+            # if error_y < 165:
+            #     pid_y_robot = 0.0    
+
+            if dist_error< 165 and abs(error_yaw) <0.001:
+                self.goal_reached = True
+            elif dist_error < 165:
+                pid_x_robot = 0.0 
+                pid_y_robot = 0.0 
+
+            # pose = np.array([pid_x,pid_y,pid_yaw])
+            pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
             s_linalg = np.linalg.solve(self.A, pose)
             wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2]]
             #  1 blue 
@@ -175,7 +200,8 @@ class HolonomicPIDController(Node):
             self.get_logger().info('changign to next goal')
             self.goal_reached = False
             self.current_goal_wp += 1
-            if self.current_goal_wp == 1:
+            print(self.current_goal_wp)
+            if self.current_goal_wp > 0:
                 self.get_logger().info('all th points reached')
                 wheel_velocities = [0.0, 0.0, 0.0,]
             if self.current_goal_wp < len(self.goals):
@@ -195,7 +221,7 @@ class HolonomicPIDController(Node):
         cmd.m1 = wheel_vel[0]
         cmd.m2 = wheel_vel[1]
         cmd.m3 = wheel_vel[2]
-        cmd.base = 90.0
+        cmd.base = 0.0
         cmd.elbow = 90.0
         msg.cmds = [cmd]
 

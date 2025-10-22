@@ -236,7 +236,7 @@ class PoseDetector(Node):
 
                     cv2.putText(
                         undistorted,
-                        f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f} deg",
+                        f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
                         (int(center[0]) + 10, int(center[1])),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.6,
