@@ -4,6 +4,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from hb_interfaces.msg import Pose2D, Poses2D
 from hb_interfaces.msg import BotCmdArray , BotCmd
+from linkattacher_msgs.srv import AttachLink , DetachLink
 import numpy as np
 import math
 
@@ -56,6 +57,14 @@ class HolonomicPIDController(Node):
         self.publisher = self.create_publisher(BotCmdArray, 
                                                '/bot_cmd',
                                                10)
+        
+        self.attach_client = self.create_client(AttachLink, '/attach_link')
+        while not self.attach_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('wits attach_link service...')
+
+        self.detach_client = self.create_client(DetachLink, '/detach_link')
+        while not self.detach_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('wits deattach_link service...')
 
         self.current_pose_bot = None
         self.current_pose_crate = None
@@ -132,9 +141,11 @@ class HolonomicPIDController(Node):
             # print(self.current_pose_crate_id,self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw)
         
         if self.goals == None:
-            self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw)]
+            self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw),
+                          (1219.2,1219.2,-1.57 ),
+                          (1219.2,205.0,0.0)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
-            
+        # print(self.goals)    
 
     def control_cb(self):
 
@@ -158,7 +169,6 @@ class HolonomicPIDController(Node):
             error_yaw += correction
             dist_error = math.sqrt(error_x**2 + error_y**2)
 
-            # error_yaw = math.atan2(math.sin(error_yaw), math.cos(error_yaw))
             while error_yaw > math.pi:
                 error_yaw -= 2 * math.pi    
             while error_yaw < -math.pi:
@@ -184,17 +194,20 @@ class HolonomicPIDController(Node):
             #     pid_x_robot = 0.0 
             # if error_y < 165:
             #     pid_y_robot = 0.0    
-
-            if dist_error< 155 and abs(error_yaw) <0.001:
-                self.goal_reached = True
-            elif dist_error < 155:
-                pid_x_robot = 0.0 
-                pid_y_robot = 0.0 
+            if self.current_goal_wp < 2 :
+                if dist_error< 155 and abs(error_yaw) <0.07:
+                    self.goal_reached = True
+                if dist_error < 155:
+                    pid_x_robot = 0.0 
+                    pid_y_robot = 0.0 
+            else :
+                if abs(error_x) < 2.0 and abs(error_y) < 2.0 and abs(error_yaw) < 0.1:
+                    self.goal_reached = True                 
 
             # pose = np.array([pid_x,pid_y,pid_yaw])
             pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
             s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2]]
+            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
             #  1 blue 
             # 2 red 
             # 3 green
@@ -203,9 +216,9 @@ class HolonomicPIDController(Node):
             self.goal_reached = False
             self.current_goal_wp += 1
             print(self.current_goal_wp)
-            if self.current_goal_wp > 0:
+            if self.current_goal_wp ==3:
                 self.get_logger().info('all th points reached')
-                wheel_velocities = [0.0, 0.0, 0.0,]
+                wheel_velocities = [0.0, 0.0, 0.0,45.0,45.0]
             if self.current_goal_wp < len(self.goals):
                 self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
             self.pid_x.reset()
@@ -223,8 +236,8 @@ class HolonomicPIDController(Node):
         cmd.m1 = wheel_vel[0]
         cmd.m2 = wheel_vel[1]
         cmd.m3 = wheel_vel[2]
-        cmd.base = 0.0
-        cmd.elbow = 90.0
+        cmd.base = wheel_vel[3]
+        cmd.elbow = wheel_vel[4]
         msg.cmds = [cmd]
 
         self.publisher.publish(msg)
