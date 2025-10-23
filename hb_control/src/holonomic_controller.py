@@ -143,7 +143,7 @@ class HolonomicPIDController(Node):
         
         if self.goals == None:
             self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw),
-                          (1219.2,1219.2,-1.57 ),
+                          (1280.2,1219.2,0.0 ),
                           (1219.2,205.0,0.0)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
         # print(self.goals)    
@@ -195,12 +195,15 @@ class HolonomicPIDController(Node):
             #     pid_x_robot = 0.0 
             # if error_y < 165:
             #     pid_y_robot = 0.0    
-            if self.current_goal_wp < 2 :
+            if self.current_goal_wp == 0 :
                 if dist_error< 155 and abs(error_yaw) <0.07:
                     self.goal_reached = True
                 if dist_error < 145:
                     pid_x_robot = 0.0 
-                    pid_y_robot = 0.0 
+                    pid_y_robot = 0.0
+            elif self.current_goal_wp == 1 :
+                if dist_error< 125 :
+                    self.goal_reached = True
             else :
                 if abs(error_x) < 2.0 and abs(error_y) < 2.0 and abs(error_yaw) < 0.1:
                     self.goal_reached = True                 
@@ -218,11 +221,11 @@ class HolonomicPIDController(Node):
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
                 time.sleep(4.0)
                 req = AttachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_blue_44", "link2_name": "box_link_44"}'
+                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_27", "link2_name": "box_link_27"}'
 
                 self.get_logger().info('Attach request sent, waiting for response...')
                 future = self.attach_client.call_async(req)
-                rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
+                rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
 
                 if future.done() and future.result() is not None:
                     response = future.result()
@@ -240,11 +243,11 @@ class HolonomicPIDController(Node):
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
                 time.sleep(4.0)
                 req = DetachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_blue_44", "link2_name": "box_link_44"}'
+                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_27", "link2_name": "box_link_27"}'
 
                 self.get_logger().info('Dettach request sent, waiting for response...')
                 future = self.detach_client.call_async(req)
-                rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
+                rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
 
                 if future.done() and future.result() is not None:
                     response = future.result()
