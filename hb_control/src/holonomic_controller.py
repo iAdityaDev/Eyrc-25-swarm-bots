@@ -193,7 +193,7 @@ class HolonomicPIDController(Node):
             #     pid_y_robot = 0.0 
             # if error_x < 165:
             #     pid_x_robot = 0.0 
-            # if error_y < 165:    
+            # if error_y < 165:
             #     pid_y_robot = 0.0    
             if self.current_goal_wp == 0 :
                 if dist_error< 155 and abs(error_yaw) <0.07:

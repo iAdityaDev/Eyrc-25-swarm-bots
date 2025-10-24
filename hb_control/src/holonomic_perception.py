@@ -233,18 +233,49 @@ class PoseDetector(Node):
                     # yaw_deg = (math.degrees(yaw) + 360) % 360
 
                     center = corners[i][0].mean(axis=0)
-
-                    cv2.putText(
-                        undistorted,
-                        f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-                        (int(center[0]) + 10, int(center[1])),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.6,
-                        (0, 0, 255),
-                        2
-                    )
-
-                    if marker_id==0:
+                    
+                    if marker_id == 0:
+                        cv2.putText(
+                            undistorted,
+                            f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                            (int(center[0]) + 10, int(center[1])),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2
+                        )
+                    elif marker_id == 2:
+                        cv2.putText(
+                            undistorted,
+                            f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                            (int(center[0]) + 10, int(center[1]-20)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2
+                        )
+                    elif marker_id == 4:
+                        cv2.putText(
+                            undistorted,
+                            f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                            (int(center[0]) + 10, int(center[1]+20)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2
+                        )
+                    else:
+                        cv2.putText(
+                                undistorted,
+                                f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                                (int(center[0]) + 10, int(center[1])),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.6,
+                                (0, 0, 255),
+                                2
+                            )
+                        
+                    if marker_id==0 or marker_id == 2 or marker_id == 4 :
                         bot_pose={
                         marker_id: (x_w, y_w, yaw),
                         }
