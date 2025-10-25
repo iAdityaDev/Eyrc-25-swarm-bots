@@ -76,15 +76,13 @@ class CheckAsssignments(Behaviour):
         self.logger.debug(f"initialise {self.name}")
 
     def update(self):
-        if self.main_node.assignments is None:
+        if self.main_node.bot_to_crate is None:
             return Status.RUNNING
-        print(self.main_node.assignments)
-        for i,(bot_id,crateid) in enumerate(self.main_node.assignments):
-            if bot_id == self.botid:
-                print(bot_id,crateid)
-                return Status.SUCCESS
-            else : 
-                return Status.FAILURE
+        crate_id = self.main_node.bot_to_crate[self.botid]
+        if crate_id:
+            return Status.SUCCESS
+        else:
+            return Status.FAILURE
 
     def terminate(self, new_status):
         self.logger.debug(f"Action::terminate {self.name} to {new_status}")
@@ -202,14 +200,11 @@ class HolonomicPIDController(Node):
         self.assignments = None
         self.tree = None
         
-        self.goals = None
-        self.goal_reached = False
-        self.current_goal_wp = 0
         self.alpha1 = math.radians(30)
         self.alpha2 = math.radians(150)
         self.alpha3 = math.radians(270)
         log_tree.level = log_tree.Level.DEBUG
-        self.tree = self.make_bt() 
+        self.tree = self.setup_all_trees() 
 
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
@@ -217,36 +212,36 @@ class HolonomicPIDController(Node):
             [0.185,0.185,0.185]
         ])
 
-
-
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
+        self.timer_bt = self.create_timer(0.5, self.tick_trees)
 
-        self.timer_bt = self.create_timer(0.5, self.tick_tree)
-        self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
+        self.get_logger().info(f'Holonomic PID Controller started.')
 
-        # self.timer = self.create_timer(0.3, self.control_crystal_cb) 
-
-    def tick_tree(self):
-
-        self.tree.tick()
-        result = self.tree.root.status
+    def tick_trees(self):
+        for botid,tree in self.trees.items():
+            tree.tick()
+            result = tree.root.status
         if result == Status.SUCCESS:
             self.get_logger().info("complete")
-            self.timer_bt.cancel()
 
-    def make_bt(self):
+    def setup_all_trees(self):
+        bot_ids = [0,2,4]
+        self.trees = {}
+        for botid in bot_ids:
+            self.trees[botid] = self.make_bt_for_bots(botid)
+
+    def make_bt_for_bots(self,botid):
         # if not self.all_bots_dict or not self.all_crates_dict or not self.bot_to_crate:
         #     return 
-        root = Sequence("MAIN SEQUENCE",memory=True)
+        root = Sequence(f"MAIN_SEQUENCE_{botid}",memory=True)
 
-        check_assign = CheckAsssignments("CheckAssignments",self,botid=0)
-        navigate = navigate_to_assigned_crate('navigate_to_assigned_crate',main_node = self,botid=0)
+        check_assign = CheckAsssignments("CheckAssignments",self,botid=botid)
+        navigate = navigate_to_assigned_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
 
         root.add_children([
             check_assign,
             navigate,
         ])    
-        print('9875643122546789856431246579')
         return py_trees.trees.BehaviourTree(root)
     
     def crate_color(self, i):
@@ -342,7 +337,47 @@ class HolonomicPIDController(Node):
         self.all_crates_dict = self.red_dict | self.green_dict | self.blue_dict
 
 
-    def control_cb(self):
+    def publish_wheel_velocities(self, wheel_vel):
+        msg = BotCmdArray()
+        cmd = BotCmd()
+        cmd.id = wheel_vel[0]
+        cmd.m1 = wheel_vel[1]
+        cmd.m2 = wheel_vel[2]
+        cmd.m3 = wheel_vel[3]
+        cmd.base = wheel_vel[4]
+        cmd.elbow = wheel_vel[5]
+        msg.cmds = [cmd]
+
+        self.publisher.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    controller = HolonomicPIDController()
+    rclpy.spin(controller)
+    controller.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+
+
+
+  def control_cb(self):
 
 
         
@@ -436,28 +471,4 @@ class HolonomicPIDController(Node):
             self.pid_y.reset()
             self.pid_yaw.reset()
         self.publish_wheel_velocities(wheel_velocities)
-
-
-    def publish_wheel_velocities(self, wheel_vel):
-        msg = BotCmdArray()
-        cmd = BotCmd()
-        cmd.id = wheel_vel[0]
-        cmd.m1 = wheel_vel[1]
-        cmd.m2 = wheel_vel[2]
-        cmd.m3 = wheel_vel[3]
-        cmd.base = wheel_vel[4]
-        cmd.elbow = wheel_vel[5]
-        msg.cmds = [cmd]
-
-        self.publisher.publish(msg)
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    controller = HolonomicPIDController()
-    rclpy.spin(controller)
-    controller.destroy_node()
-    rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
+'''
