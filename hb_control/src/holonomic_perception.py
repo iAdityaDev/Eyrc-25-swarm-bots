@@ -73,12 +73,19 @@ class PoseDetector(Node):
 
         self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
 
-        self.x_real = np.array([1218.84,298.2,498.2, 1219.2, 1219.2,819.2]) 
-        self.x_est = np.array([1219.2,274.46,478.98, 1218.86, 1218.85, 808.45]) 
-        self.y_real = np.array([205.0, 1031.2, 831.2, 1219.2, 719.2, 1019.2]) 
-        self.y_est = np.array([169.4, 1027.31, 821.49, 1219.41, 707.28, 1014.27])
-        self.a_x , self.b_x = np.polyfit(self.x_est,self.x_real,1)
-        self.a_y , self.b_y = np.polyfit(self.y_est,self.y_real,1)
+        self.x_real_1 = np.array([1218.84,298.2,498.2, 1219.2, 1219.2,819.2,869.2]) 
+        self.x_est_1 = np.array([1219.2,274.46,478.98, 1218.86, 1218.85, 808.45,864.94]) 
+        self.y_real_1 = np.array([205.0, 1031.2, 831.2, 1219.2, 719.2, 1019.2,]) 
+        self.y_est_1 = np.array([169.4, 1027.31, 821.49, 1219.41, 707.28, 1014.27,])
+        self.a_x_1 , self.b_x_1 = np.polyfit(self.x_est_1,self.x_real_1,1)
+        self.a_y_1 , self.b_y_1 = np.polyfit(self.y_est_1,self.y_real_1,1)
+
+        self.x_real_2 = np.array([2152.2,1582.11,1951.2,1914.2,1912.0]) 
+        self.x_est_2 = np.array([2174.66,1569.2,1958.97,1924.2,1921.2]) 
+        self.y_real_2 = np.array([724.2,219.2,667.2,940.0,1019.0]) 
+        self.y_est_2 = np.array([711.35,169.37,660.18,925,1040.0])
+        self.a_x_2 , self.b_x_2 = np.polyfit(self.x_est_2,self.x_real_2,1)
+        self.a_y_2 , self.b_y_2 = np.polyfit(self.y_est_2,self.y_real_2,1)
 
         self.get_logger().info('PoseDetector initialized')
 
@@ -104,8 +111,15 @@ class PoseDetector(Node):
   
         x_world, y_world = world_pt[0][0]
 
-        x_world = self.a_x*x_world + self.b_x
-        y_world = self.a_y*y_world + self.b_y
+        if (x_world>=0 and x_world<=1219.2) and (y_world>=0 and y_world<=1219.2):
+            
+            x_world = self.a_x_1*x_world + self.b_x_1
+            y_world = self.a_y_1*y_world + self.b_y_1
+
+        if (x_world>1219.2 and x_world<=2438.4) and (y_world>=0 and y_world<=1219.2):
+            
+            x_world = self.a_x_2*x_world + self.b_x_2
+            y_world = self.a_y_2*y_world + self.b_y_2
 
         return x_world, y_world
 

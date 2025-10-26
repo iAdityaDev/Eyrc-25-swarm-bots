@@ -127,6 +127,7 @@ class navigate_to_assigned_crate(Behaviour):
         error_y = cy-by
         error_yaw = cyaw-byaw
         correction = -1.03 * cyaw + 0.8
+        correction = 0 
         error_yaw += correction
         dist_error = math.sqrt(error_x**2 + error_y**2)
 
