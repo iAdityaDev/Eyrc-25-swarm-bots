@@ -13,6 +13,7 @@ from py_trees.behaviour import Behaviour
 from py_trees.common import Status
 from py_trees.composites import Sequence
 from py_trees import logging as log_tree
+import json
 
 # actio node 
 # condition node 
@@ -95,6 +96,8 @@ class navigate_to_assigned_crate(Behaviour):
         self.botid = botid
         self.last_time = 0.0
         self.max_vel = 2.0
+        self.tick_count = 0 
+        self.max_ticks = 15
 
         self.pid_params = {
             'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
@@ -107,13 +110,14 @@ class navigate_to_assigned_crate(Behaviour):
         self.pid_yaw = PID(**self.pid_params['theta'])
 
     def setup(self):
-        self.logger.debug(f"Action::setup {self.name}")
+        self.logger.debug(f"navigate to crate::setup {self.name}")
 
     def initialise(self):
-        self.logger.debug(f"Action::initialise {self.name}")
+        self.tick_count = 0 
+        self.logger.debug(f"navigate to crate::initialise {self.name}")
 
     def update(self):
-        self.logger.debug(f"Action::update {self.name}")
+        self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
         cid,cx,cy,cyaw = self.main_node.all_crates_dict[self.main_node.bot_to_crate[self.botid]]
 
@@ -125,10 +129,13 @@ class navigate_to_assigned_crate(Behaviour):
 
         error_x = cx-bx
         error_y = cy-by
-        error_yaw = cyaw-byaw
-        correction = -1.03 * cyaw + 0.8
-        correction = 0 
-        error_yaw += correction
+        target_yaw = math.atan2(error_y,error_x)
+        error_yaw = target_yaw - byaw - math.pi/2
+
+        # error_yaw = cyaw-byaw
+        # correction = -1.03 * cyaw + 0.8
+        # correction = 0 
+        # error_yaw += correction
         dist_error = math.sqrt(error_x**2 + error_y**2)
 
         while error_yaw > math.pi:
@@ -153,13 +160,87 @@ class navigate_to_assigned_crate(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
 
+        if dist_error<165 and abs(error_yaw) < 0.13:
+            self.tick_count += 1 
+            wheel_velocities = [self.botid,0.0,0.0,0.0,90.0,90.0]
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+            if self.tick_count < self.max_ticks:
+                return py_trees.common.Status.RUNNING
+            return Status.SUCCESS  
+
         self.main_node.publish_wheel_velocities(wheel_velocities)
 
         return Status.RUNNING
 
     def terminate(self, new_status):
-        self.logger.debug(f"Action::terminate {self.name} to {new_status}")
+        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
+
+class pickup_crate(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(pickup_crate,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid 
+        self.botname = None
+        if self.botid == 0:
+            self.botname = "crystal"
+        elif self.botid == 2:
+            self.botname = "frostbite"
+        elif self.botid == 4 :
+            self.botname = "glacio"
+        self.tick_count = 0 
+        self.tick_count_2 = 0 
+        self.max_ticks = 15
+        self.max_ticks_2 = 15
+        self.bool = True
+
+    def setup(self):
+        self.logger.debug(f"pickup::setup {self.name}")
+
+    def initialise(self):
+        self.tick_count = 0 
+        self.logger.debug(f"pickup::initialise {self.name}")
     
+    def update(self):
+        if self.main_node.bot_to_crate is None:
+            return Status.RUNNING
+        self.tick_count += 1
+        self.tick_count_2 += 1
+
+        if self.bool:
+            self.crateid = self.main_node.bot_to_crate[self.botid]
+            self.cratecolor = self.main_node.crate_color_dict[self.crateid]
+            req = AttachLink.Request()
+            req.data = json.dumps({
+                "model1_name": f"hb_{self.botname}",
+                "link1_name": f"arm_link_2",
+                "model2_name": f"crate_{self.cratecolor}_{self.crateid}",
+                "link2_name": f"box_link_{self.crateid}"
+                })
+
+            # self.get_logger().info('Attach request sent, waiting for response...')
+            future = self.main_node.attach_client.call_async(req)
+            self.bool = False
+            # rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=8.0)
+
+            # if future.done() and future.result() is not None:
+            #     response = future.result()
+            #     if response.success:
+            #         self.get_logger().info(f"Attachment successful: {response.message}")
+            #     else:
+            #         self.get_logger().error(f"Attachment failed: {response.message}")
+            # else:
+            #     self.get_logger().error('Attach service call timed out or did not respond.')
+        if self.tick_count < self.max_ticks:
+            return py_trees.common.Status.RUNNING
+
+        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,45.0,45.0])
+        if self.tick_count_2 < self.max_ticks_2:
+            return py_trees.common.Status.RUNNING
+        return Status.SUCCESS
+
+
+    def terminate(self, new_status):
+        self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
 class HolonomicPIDController(Node):
     def __init__(self):
@@ -191,6 +272,7 @@ class HolonomicPIDController(Node):
         self.red_dict, self.green_dict, self.blue_dict ,self.all_crates_dict = {}, {}, {}, {}
         self.crystal_dict, self.frostbite_dict, self.glacio_dict,self.all_bots_dict = {}, {}, {}, {}
         self.bot_to_crate = {}
+        self.crate_color_dict = {}
         self.current_pose_bot = None
         self.current_pose_crates = None
         self.all_bots = None
@@ -238,20 +320,22 @@ class HolonomicPIDController(Node):
 
         check_assign = CheckAsssignments("CheckAssignments",self,botid=botid)
         navigate = navigate_to_assigned_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
+        pick_crate = pickup_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
 
         root.add_children([
             check_assign,
             navigate,
+            # pick_crate,
         ])    
         return py_trees.trees.BehaviourTree(root)
     
     def crate_color(self, i):
         if i % 3 == 0:
-            return "Red"
+            return "red"
         elif i % 3 == 1:
-            return "Green"
+            return "green"
         else:
-            return "Blue"
+            return "blue"
 
     def pose_bot_cb(self, msg):
         for self.current_pose_bot in msg.poses:
@@ -322,13 +406,14 @@ class HolonomicPIDController(Node):
     def pose_crate_cb(self, msg):
         for self.current_pose_crates in msg.poses:
             color = self.crate_color(self.current_pose_crates.id)
+            self.crate_color_dict[self.current_pose_crates.id] = color
             crate_tuple = (self.current_pose_crates.id, self.current_pose_crates.x, self.current_pose_crates.y, self.current_pose_crates.w)
 
-            if color == "Red":
+            if color == "red":
                 self.red_dict[self.current_pose_crates.id] = crate_tuple
-            elif color == "Green":
+            elif color == "green":
                 self.green_dict[self.current_pose_crates.id] = crate_tuple
-            elif color == "Blue":
+            elif color == "blue":
                 self.blue_dict[self.current_pose_crates.id] = crate_tuple
 
         self.red_crates = list(self.red_dict.values())
@@ -378,64 +463,8 @@ if __name__ == '__main__':
 
 
 
-  def control_cb(self):
-
-
-        
-
-
-        if not self.goal_reached:
-
-
-
-            # if abs(error_yaw) > 0.4:
-            #     pid_x_robot = 0.0
-            #     pid_y_robot = 0.0 
-            # if error_x < 165:
-            #     pid_x_robot = 0.0 
-            # if error_y < 165:    
-            #     pid_y_robot = 0.0    
-            
-            if self.current_goal_wp == 0 :
-                if dist_error< 155 and abs(error_yaw) <0.07:
-                    self.goal_reached = True
-                if dist_error < 145:
-                    pid_x_robot = 0.0 
-                    pid_y_robot = 0.0
-            elif self.current_goal_wp == 1 :
-                if dist_error< 125 :
-                    self.goal_reached = True
-            else :
-                if abs(error_x) < 2.0 and abs(error_y) < 2.0 and abs(error_yaw) < 0.1:
-                    self.goal_reached = True                 
-
-            #  1 blue 
-            # 2 red 
-            # 3 green
-        if self.goal_reached:
-
             if self.current_goal_wp == 0:
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
-                time.sleep(4.0)
-                req = AttachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_27", "link2_name": "box_link_27"}'
-
-                self.get_logger().info('Attach request sent, waiting for response...')
-                future = self.attach_client.call_async(req)
-                rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
-
-                if future.done() and future.result() is not None:
-                    response = future.result()
-                    if response.success:
-                        self.get_logger().info(f"Attachment successful: {response.message}")
-                    else:
-                        self.get_logger().error(f"Attachment failed: {response.message}")
-                else:
-                    self.get_logger().error('Attach service call timed out or did not respond.')
-
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,45.0,45.0])
-                time.sleep(4.0)
-
+            
             if self.current_goal_wp == 1:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
                 time.sleep(4.0)
