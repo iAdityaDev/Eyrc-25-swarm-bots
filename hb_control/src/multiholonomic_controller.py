@@ -97,7 +97,7 @@ class navigate_to_assigned_crate(Behaviour):
         self.last_time = 0.0
         self.max_vel = 2.0
         self.tick_count = 0 
-        self.max_ticks = 15
+        self.max_ticks = 30
 
         self.pid_params = {
             'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
@@ -160,7 +160,7 @@ class navigate_to_assigned_crate(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
 
-        if dist_error<165 and abs(error_yaw) < 0.13:
+        if dist_error<153 and abs(error_yaw) < 0.13:
             self.tick_count += 1 
             wheel_velocities = [self.botid,0.0,0.0,0.0,90.0,90.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -301,11 +301,21 @@ class HolonomicPIDController(Node):
         self.get_logger().info(f'Holonomic PID Controller started.')
 
     def tick_trees(self):
+        completed_trees = []
+
         for botid,tree in self.trees.items():
             tree.tick()
             result = tree.root.status
-        if result == Status.SUCCESS:
-            self.get_logger().info("complete")
+            if result == Status.SUCCESS:
+                completed_trees.append(botid)
+                self.get_logger().info("complete")
+        
+        for botid in completed_trees:
+            del self.trees[botid]
+
+        if not self.trees:
+            self.get_logger().info("All trees completed. Stopping BT timer.")
+            self.timer_bt.cancel()
 
     def setup_all_trees(self):
         bot_ids = [0,2,4]
@@ -325,7 +335,7 @@ class HolonomicPIDController(Node):
         root.add_children([
             check_assign,
             navigate,
-            # pick_crate,
+            pick_crate,
         ])    
         return py_trees.trees.BehaviourTree(root)
     
