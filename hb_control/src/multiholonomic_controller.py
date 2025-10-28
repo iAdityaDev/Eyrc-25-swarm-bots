@@ -8,6 +8,7 @@ from linkattacher_msgs.srv import AttachLink , DetachLink
 import numpy as np
 import math
 import time
+import py_trees
 
 # ros2 service call /attach_link linkattacher_msgs/srv/AttachLink "{
 #   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_17\"}'
@@ -37,6 +38,96 @@ class PID:
     def reset(self):
         self.integral = 0.0
         self.prev_error = 0.0
+
+
+
+class MoveToTarget(py_trees.behaviour.Behaviour):
+    def __init__(self, name, node, target):
+        super().__init__(name)
+        self.node = node        
+        self.target = target    
+        self.reached = False
+        self.started = False
+        self.name=name
+
+    def initialise(self):
+        self.node.get_logger().info(f"[BT] Moving to target {self.target}")
+        self.started = True
+        self.reached = False    
+        
+    def update(self):
+        self.node.assignments
+        self.node.all_bots
+        self.node.all_crates
+        
+        if self.name=="Move Bot1":
+            bot_id=0
+        if self.name=="Move Bot2":
+            bot_id=2 
+        if self.name=="Move Bot3":
+            bot_id=4
+
+        crate_id=self.node.assign_dict[bot_id]
+        bid, bx, by, bw=self.node.all_bots[bot_id//2]
+        cx, cy = self.node.crates_dict[crate_id]
+
+        error_x=-bx+cx
+        error_y=-by+cy
+        dist_error = math.sqrt(error_x**2 + error_y**2)
+
+        now = self.node.get_clock().now()
+        dt = (now.nanoseconds - self.node.last_time)/1e9
+        if dt <= 0:
+            return
+        self.node.last_time = now.nanoseconds
+
+        pid_x = self.node.pid_x.compute(error_x,dt)
+        pid_y = self.node.pid_y.compute(error_y,dt)
+        print(bid)
+        pid_yaw=0.0
+        pose = np.array([pid_x,pid_y,-pid_yaw])
+        s_linalg = np.linalg.solve(self.node.A, pose)
+        wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0,bot_id]
+
+        self.node.publish_wheel_velocities(wheel_velocities)
+
+        if dist_error <0.07:
+            self.node.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
+
+            
+        return py_trees.common.Status.RUNNING    
+
+                       
+ 
+        # uses node.current_pose_bot and PID to move
+        # returns RUNNING, SUCCESS, or FAILURE
+
+
+# class PickBox(py_trees.behaviour.Behaviour):
+#     def __init__(self, name, node):
+#         ...
+#     def update(self):
+#         print("uodate")
+#         # calls attach_link client
+#         # waits for result -> SUCCESS or FAILURE
+
+# class MoveToDrop(py_trees.behaviour.Behaviour):
+#     def __init__(self, name, node, target):
+#         ...
+#     def update(self):
+#         # same PID control as MoveToTarget
+#         print("uodate")
+
+# class DropBox(py_trees.behaviour.Behaviour):
+#     def __init__(self, name, node):
+#         ...
+#     def update(self):
+#         # calls detach_link client
+#         print("uodate")
+
+
+
+
 
 
 class HolonomicPIDController(Node):
@@ -85,6 +176,10 @@ class HolonomicPIDController(Node):
         self.target_x = 0.0
         self.target_y = 0.0
         self.target_yaw = 0.0
+        self.assignments=[]
+        self.crates_dict = {}
+        self.assign_dict={}
+        
 
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
@@ -93,8 +188,8 @@ class HolonomicPIDController(Node):
         ])
 
         self.pid_params = {
-            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'x': {'kp': 0.25, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
+            'y': {'kp': 0.25, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
             'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
         }
 
@@ -165,6 +260,7 @@ class HolonomicPIDController(Node):
             if chosen_crate:
                 self.assigned_crates.add(chosen_crate[0])
                 self.assignments.append((bid, chosen_crate[0]))
+                self.assign_dict[bid]=chosen_crate[0]
 
         for bot_id, crate_id in self.assignments:
             print(f"Bot {bot_id}  Crate {crate_id}")
@@ -183,7 +279,8 @@ class HolonomicPIDController(Node):
         for self.current_pose_crates in msg.poses:
             color = self.crate_color(self.current_pose_crates.id)
             crate_tuple = (self.current_pose_crates.id, self.current_pose_crates.x, self.current_pose_crates.y, self.current_pose_crates.w)
-
+            crate_id = self.current_pose_crates.id
+            self.crates_dict[crate_id] = (self.current_pose_crates.x, self.current_pose_crates.y)
             if color == "Red":
                 self.red_dict[self.current_pose_crates.id] = crate_tuple
             elif color == "Green":
@@ -221,7 +318,7 @@ class HolonomicPIDController(Node):
             correction = -1.03 * self.current_pose_crate_yaw + 0.8
             error_yaw += correction
             dist_error = math.sqrt(error_x**2 + error_y**2)
-
+            
             while error_yaw > math.pi:
                 error_yaw -= 2 * math.pi    
             while error_yaw < -math.pi:
@@ -332,7 +429,7 @@ class HolonomicPIDController(Node):
     def publish_wheel_velocities(self, wheel_vel):
         msg = BotCmdArray()
         cmd = BotCmd()
-        cmd.id = 0
+        cmd.id = wheel_vel[5]
         cmd.m1 = wheel_vel[0]
         cmd.m2 = wheel_vel[1]
         cmd.m3 = wheel_vel[2]
@@ -344,11 +441,56 @@ class HolonomicPIDController(Node):
 
 
 def main(args=None):
+
+
     rclpy.init(args=args)
-    controller = HolonomicPIDController()
-    rclpy.spin(controller)
-    controller.destroy_node()
-    rclpy.shutdown()
+
+ 
+    node = HolonomicPIDController()
+
+
+    root = py_trees.composites.Parallel(
+        name="AllBotsParallel",
+        policy=py_trees.common.ParallelPolicy(
+            success=py_trees.common.ParallelPolicy.SUCCESS_ON_ALL,
+            failure=py_trees.common.ParallelPolicy.FAILURE_ON_ONE
+        )
+    )
+
+  
+    bot1_seq = py_trees.composites.Sequence(name="Bot1Sequence", memory=False)
+    bot1_seq.add_children([
+        MoveToTarget("MoveBot1", node, target=(1.0, 1.0)),
+    ])
+
+   
+    bot2_seq = py_trees.composites.Sequence(name="Bot2Sequence", memory=False)
+    bot2_seq.add_children([
+        MoveToTarget("MoveBot2", node, target=(1.0, 1.2)),
+    ])
+
+    bot3_seq = py_trees.composites.Sequence(name="Bot3Sequence", memory=False)
+    bot3_seq.add_children([
+        MoveToTarget("MoveBot3", node, target=(1.0, 1.4)),
+    ])
+
+  
+    root.add_children([bot1_seq, bot2_seq, bot3_seq])
+
+    behaviour_tree = py_trees.trees.BehaviourTree(root)
+
+
+    try:
+        while rclpy.ok():
+            behaviour_tree.tick()                     
+            rclpy.spin_once(node, timeout_sec=0.1)    
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
 
 if __name__ == '__main__':
     main()
