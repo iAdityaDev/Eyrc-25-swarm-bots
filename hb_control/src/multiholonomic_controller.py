@@ -242,6 +242,254 @@ class pickup_crate(Behaviour):
     def terminate(self, new_status):
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
+class navigate_to_dropzone(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(navigate_to_dropzone,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid
+        self.last_time = 0.0
+        self.max_vel = 2.0
+        self.tick_count = 0 
+        self.max_ticks = 15
+
+        self.pid_params = {
+            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+        }
+
+        self.pid_x = PID(**self.pid_params['x'])
+        self.pid_y = PID(**self.pid_params['y'])
+        self.pid_yaw = PID(**self.pid_params['theta'])
+
+    def setup(self):
+        self.logger.debug(f"navigate to crate::setup {self.name}")
+
+    def initialise(self):
+        self.tick_count = 0 
+        self.logger.debug(f"navigate to crate::initialise {self.name}")
+
+    def update(self):
+        if self.main_node.bot_to_crate is None:
+            return Status.RUNNING
+        
+        self.crateid = self.main_node.bot_to_crate[self.botid]
+        self.cratecolor = self.main_node.crate_color_dict[self.crateid]
+        
+        if self.cratecolor == 'red':
+            cx,cy = self.main_node.red_D1
+        if self.cratecolor == 'blue':
+            cx,cy = self.main_node.blue_D2
+        if self.cratecolor == 'green':
+            cx,cy = self.main_node.green_D3
+
+        self.logger.debug(f"navigate to crate::update {self.name}")
+        _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
+
+        now = self.main_node.get_clock().now()
+        dt = (now.nanoseconds - self.last_time)/1e9
+        if dt <= 0:
+            return
+        self.last_time = now.nanoseconds
+
+        error_x = cx-bx
+        error_y = cy-by
+        target_yaw = math.atan2(error_y,error_x)
+        error_yaw = target_yaw - byaw - math.pi/2
+
+        dist_error = math.sqrt(error_x**2 + error_y**2)
+
+        while error_yaw > math.pi:
+            error_yaw -= 2 * math.pi    
+        while error_yaw < -math.pi:
+            error_yaw += 2 * math.pi
+        print(error_x,error_y,error_yaw)
+
+        pid_x = self.pid_x.compute(error_x,dt)
+        pid_y = self.pid_y.compute(error_y,dt)
+        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+
+        cos_yaw = math.cos(-byaw)
+        sin_yaw = math.sin(-byaw)
+        
+        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+
+
+        # pose = np.array([pid_x,pid_y,pid_yaw])
+        pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
+        s_linalg = np.linalg.solve(self.main_node.A, pose)
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
+
+        if dist_error<160 and abs(error_yaw) < 0.63:
+            wheel_velocities = [self.botid,0,0,0,45.0,45.0]
+            return Status.SUCCESS  
+
+        self.main_node.publish_wheel_velocities(wheel_velocities)
+
+        return Status.RUNNING
+
+    def terminate(self, new_status):
+        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
+
+
+class drop_crate(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(drop_crate,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid 
+        self.botname = None
+        if self.botid == 0:
+            self.botname = "crystal"
+        elif self.botid == 2:
+            self.botname = "frostbite"
+        elif self.botid == 4 :
+            self.botname = "glacio"
+        self.tick_count = 0 
+        self.tick_count_2 = 0 
+        self.max_ticks = 15
+        self.max_ticks_2 = 15
+        self.bool = True
+
+    def setup(self):
+        self.logger.debug(f"pickup::setup {self.name}")
+
+    def initialise(self):
+        self.tick_count = 0 
+        self.tick_count_2 = 0 
+        self.logger.debug(f"pickup::initialise {self.name}")
+    
+    def update(self):
+        if self.main_node.bot_to_crate is None:
+            return Status.RUNNING
+        self.tick_count_2 += 1
+        print('insdie the update block ')
+
+        if self.tick_count_2 < self.max_ticks_2:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,90.0,90.0])
+            print('inside the tick retrun')
+            return py_trees.common.Status.RUNNING
+
+        self.tick_count += 1
+        if self.bool:
+            self.crateid = self.main_node.bot_to_crate[self.botid]
+            self.cratecolor = self.main_node.crate_color_dict[self.crateid]
+            req = DetachLink.Request()
+            req.data = json.dumps({
+                "model1_name": f"hb_{self.botname}",
+                "link1_name": f"arm_link_2",
+                "model2_name": f"crate_{self.cratecolor}_{self.crateid}",
+                "link2_name": f"box_link_{self.crateid}"
+                })
+
+            # self.get_logger().info('Attach request sent, waiting for response...')
+            future = self.main_node.detach_client.call_async(req)
+            self.bool = False
+            # rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=8.0)
+
+            # if future.done() and future.result() is not None:
+            #     response = future.result()
+            #     if response.success:
+            #         self.get_logger().info(f"Attachment successful: {response.message}")
+            #     else:
+            #         self.get_logger().error(f"Attachment failed: {response.message}")
+            # else:
+            #     self.get_logger().error('Attach service call timed out or did not respond.')
+        if self.tick_count < self.max_ticks:
+            return py_trees.common.Status.RUNNING
+
+        return Status.SUCCESS
+
+
+    def terminate(self, new_status):
+        self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
+
+class dock(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(dock,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid
+        self.last_time = 0.0
+        self.max_vel = 2.0
+        self.tick_count = 0 
+        self.max_ticks = 15
+
+        self.pid_params = {
+            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+        }
+
+        self.pid_x = PID(**self.pid_params['x'])
+        self.pid_y = PID(**self.pid_params['y'])
+        self.pid_yaw = PID(**self.pid_params['theta'])
+
+    def setup(self):
+        self.logger.debug(f"navigate to crate::setup {self.name}")
+
+    def initialise(self):
+        self.tick_count = 0 
+        self.logger.debug(f"navigate to crate::initialise {self.name}")
+
+    def update(self):
+
+        if self.botid == 0:
+            cx,cy = (1218.0,205.0)
+        if self.botid == 2:
+            cx,cy = (1593.0,218.0)
+        if self.botid == 4:
+            cx,cy = (864.25,203.0)
+
+        self.logger.debug(f"navigate to crate::update {self.name}")
+        _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
+
+        now = self.main_node.get_clock().now()
+        dt = (now.nanoseconds - self.last_time)/1e9
+        if dt <= 0:
+            return
+        self.last_time = now.nanoseconds
+
+        error_x = cx-bx
+        error_y = cy-by
+        target_yaw = math.atan2(error_y,error_x)
+        error_yaw = target_yaw - byaw - math.pi/2
+
+        dist_error = math.sqrt(error_x**2 + error_y**2)
+
+        while error_yaw > math.pi:
+            error_yaw -= 2 * math.pi    
+        while error_yaw < -math.pi:
+            error_yaw += 2 * math.pi
+        print(error_x,error_y,error_yaw)
+
+        pid_x = self.pid_x.compute(error_x,dt)
+        pid_y = self.pid_y.compute(error_y,dt)
+        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+
+        cos_yaw = math.cos(-byaw)
+        sin_yaw = math.sin(-byaw)
+        
+        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+
+
+        # pose = np.array([pid_x,pid_y,pid_yaw])
+        pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
+        s_linalg = np.linalg.solve(self.main_node.A, pose)
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],0.0,180.0]
+
+        if dist_error<100 and abs(error_yaw) < 0.63:
+            return Status.SUCCESS  
+
+        self.main_node.publish_wheel_velocities(wheel_velocities)
+
+        return Status.RUNNING
+
+    def terminate(self, new_status):
+        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
+
+
+
 class HolonomicPIDController(Node):
     def __init__(self):
         super().__init__('holonomic_pid_controller')  # initializing ros node
@@ -282,7 +530,10 @@ class HolonomicPIDController(Node):
         self.unassigned_crates = None
         self.assignments = None
         self.tree = None
-        
+        self.red_crate_dropzone = ()
+        self.red_D1 = (1215.0,1215.0)
+        self.blue_D2 = (820.0,2017.5)
+        self.green_D3 = (1616.0,2017.5)
         self.alpha1 = math.radians(30)
         self.alpha2 = math.radians(150)
         self.alpha3 = math.radians(270)
@@ -318,7 +569,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [0,2,4]
+        bot_ids = [0,]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)
@@ -330,12 +581,18 @@ class HolonomicPIDController(Node):
 
         check_assign = CheckAsssignments("CheckAssignments",self,botid=botid)
         navigate = navigate_to_assigned_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
-        pick_crate = pickup_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
+        pick_crate = pickup_crate('pick',main_node=self,botid=botid)
+        navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
+        drope_crate = drop_crate('drop',main_node=self,botid=botid)
+        docks = dock('dock',main_node=self,botid=botid)
 
         root.add_children([
             check_assign,
             navigate,
             pick_crate,
+            navigate_drop,
+            drope_crate,
+            docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
     
@@ -456,59 +713,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-
-
-
-            if self.current_goal_wp == 0:
-            
-            if self.current_goal_wp == 1:
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
-                time.sleep(4.0)
-                req = DetachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_27", "link2_name": "box_link_27"}'
-
-                self.get_logger().info('Dettach request sent, waiting for response...')
-                future = self.detach_client.call_async(req)
-                rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
-
-                if future.done() and future.result() is not None:
-                    response = future.result()
-                    if response.success:
-                        self.get_logger().info(f"Attachment successful: {response.message}")
-                    else:
-                        self.get_logger().error(f"Attachment failed: {response.message}")
-                else:
-                    self.get_logger().error('Attach service call timed out or did not respond.')
-
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,0.0,180.0])
-                time.sleep(4.0)
-
-            self.get_logger().info('changign to next goal')
-            self.goal_reached = False
-            self.current_goal_wp += 1
-            
-            print(self.current_goal_wp)
-            if self.current_goal_wp ==3:
-                self.get_logger().info('all th points reached')
-                wheel_velocities = [0.0, 0.0, 0.0,45.0,45.0]
-            if self.current_goal_wp < len(self.goals):
-                self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
-            self.pid_x.reset()
-            self.pid_y.reset()
-            self.pid_yaw.reset()
-        self.publish_wheel_velocities(wheel_velocities)
-'''
