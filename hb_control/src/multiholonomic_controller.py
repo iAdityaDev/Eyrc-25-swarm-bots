@@ -14,9 +14,6 @@ from py_trees.common import Status
 from py_trees.composites import Sequence
 from py_trees import logging as log_tree
 import json
-from py_trees.blackboard import Blackboard
-from collections import defaultdict
-
 
 # actio node 
 # condition node 
@@ -135,6 +132,10 @@ class navigate_to_assigned_crate(Behaviour):
         target_yaw = math.atan2(error_y,error_x)
         error_yaw = target_yaw - byaw - math.pi/2
 
+        # error_yaw = cyaw-byaw
+        # correction = -1.03 * cyaw + 0.8
+        # correction = 0 
+        # error_yaw += correction
         dist_error = math.sqrt(error_x**2 + error_y**2)
 
         while error_yaw > math.pi:
@@ -160,7 +161,7 @@ class navigate_to_assigned_crate(Behaviour):
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
 
         if dist_error<153 and abs(error_yaw) < 0.13:
-            self.tick_count += 1
+            self.tick_count += 1 
             wheel_velocities = [self.botid,0.0,0.0,0.0,90.0,90.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             if self.tick_count < self.max_ticks:
@@ -196,6 +197,7 @@ class pickup_crate(Behaviour):
         self.logger.debug(f"pickup::setup {self.name}")
 
     def initialise(self):
+        self.bool = True
         self.tick_count = 0 
         self.logger.debug(f"pickup::initialise {self.name}")
     
@@ -206,8 +208,52 @@ class pickup_crate(Behaviour):
         self.tick_count_2 += 1
 
         if self.bool:
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            print('i am coming here babssss')
+            
             self.crateid = self.main_node.bot_to_crate[self.botid]
             self.cratecolor = self.main_node.crate_color_dict[self.crateid]
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
+            print(self.cratecolor)
             req = AttachLink.Request()
             req.data = json.dumps({
                 "model1_name": f"hb_{self.botname}",
@@ -219,7 +265,7 @@ class pickup_crate(Behaviour):
             # self.get_logger().info('Attach request sent, waiting for response...')
             future = self.main_node.attach_client.call_async(req)
             self.bool = False
-            # rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=8.0)
+            rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=1.0)
 
             # if future.done() and future.result() is not None:
             #     response = future.result()
@@ -229,14 +275,12 @@ class pickup_crate(Behaviour):
             #         self.get_logger().error(f"Attachment failed: {response.message}")
             # else:
             #     self.get_logger().error('Attach service call timed out or did not respond.')
-   
         if self.tick_count < self.max_ticks:
             return py_trees.common.Status.RUNNING
 
-        # self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,45.0,45.0])
-        # if self.tick_count_2 < self.max_ticks_2:
-        #     return py_trees.common.Status.RUNNING
-        self.main_node.bb.set(f'bot_pickup{self.botid}',True)
+        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,45.0,45.0])
+        if self.tick_count_2 < self.max_ticks_2:
+            return py_trees.common.Status.RUNNING
         return Status.SUCCESS
 
 
@@ -263,7 +307,6 @@ class navigate_to_dropzone(Behaviour):
         self.pid_y = PID(**self.pid_params['y'])
         self.pid_yaw = PID(**self.pid_params['theta'])
 
-
     def setup(self):
         self.logger.debug(f"navigate to crate::setup {self.name}")
 
@@ -274,46 +317,7 @@ class navigate_to_dropzone(Behaviour):
     def update(self):
         if self.main_node.bot_to_crate is None:
             return Status.RUNNING
-
-        print('*********************************************************')
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print(self.main_node.color_to_bot)
-        print('//////////////////////////////////////////////////////////////')
-        # if self.main_node.no_of_red > 1:
-            
-
+        
         self.crateid = self.main_node.bot_to_crate[self.botid]
         self.cratecolor = self.main_node.crate_color_dict[self.crateid]
         
@@ -360,10 +364,10 @@ class navigate_to_dropzone(Behaviour):
         # pose = np.array([pid_x,pid_y,pid_yaw])
         pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],90.0,90.0]
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
 
         if dist_error<160 and abs(error_yaw) < 0.63:
-            wheel_velocities = [self.botid,0,0,0,90.0,90.0]
+            wheel_velocities = [self.botid,0,0,0,45.0,45.0]
             return Status.SUCCESS  
 
         self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -396,6 +400,7 @@ class drop_crate(Behaviour):
         self.logger.debug(f"pickup::setup {self.name}")
 
     def initialise(self):
+        self.bool = True
         self.tick_count = 0 
         self.tick_count_2 = 0 
         self.logger.debug(f"pickup::initialise {self.name}")
@@ -426,7 +431,7 @@ class drop_crate(Behaviour):
             # self.get_logger().info('Attach request sent, waiting for response...')
             future = self.main_node.detach_client.call_async(req)
             self.bool = False
-            # rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=8.0)
+            rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=1.0)
 
             # if future.done() and future.result() is not None:
             #     response = future.result()
@@ -444,6 +449,32 @@ class drop_crate(Behaviour):
 
     def terminate(self, new_status):
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
+
+class check_other_asssign(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(check_other_asssign,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid 
+
+    def setup(self):
+        self.logger.debug(f"pickup::setup {self.name}")
+
+    def initialise(self):
+        pass
+
+    def update(self):
+
+        if self.main_node.unassigned_crates == None:
+            return Status.SUCCESS
+        
+        cid = self.main_node.unassigned_crates[0]
+        self.main_node.bot_to_crate[self.botid] = cid
+        self.main_node.unassigned_crates = None
+        return Status.RUNNING
+
+    def terminate(self, new_status):
+        self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
+
 
 class dock(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -475,11 +506,11 @@ class dock(Behaviour):
     def update(self):
 
         if self.botid == 0:
-            cx,cy = (1218.0,205.0)
+            cx,cy = (1218.0,130.0)
         if self.botid == 2:
-            cx,cy = (1593.0,218.0)
+            cx,cy = (1593.0,130.0)
         if self.botid == 4:
-            cx,cy = (864.25,203.0)
+            cx,cy = (864.25,130.0)
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -519,7 +550,7 @@ class dock(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],0.0,180.0]
 
-        if dist_error<100 and abs(error_yaw) < 0.63:
+        if dist_error<100 and abs(error_yaw) < 0.13:
             return Status.SUCCESS  
 
         self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -573,21 +604,13 @@ class HolonomicPIDController(Node):
         self.tree = None
         self.red_crate_dropzone = ()
         self.red_D1 = (1215.0,1215.0)
-        self.blue_D2 = (820.0,2017.5)
-        self.green_D3 = (1616.0,2017.5)
+        self.blue_D2 = (1616.0,2017.5)
+        self.green_D3 = (820.0,2017.5)
         self.alpha1 = math.radians(30)
         self.alpha2 = math.radians(150)
         self.alpha3 = math.radians(270)
         log_tree.level = log_tree.Level.DEBUG
         self.tree = self.setup_all_trees() 
-        self.bb = py_trees.blackboard.Blackboard()
-        self.no_of_red = 0
-        self.no_of_blue = 0
-        self.no_of_green = 0
-        self.color_to_bot = defaultdict(list)
-        self.color_to_bot = { "red": [], "blue": [], "green": [] }
-
-
 
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
@@ -600,11 +623,24 @@ class HolonomicPIDController(Node):
 
         self.get_logger().info(f'Holonomic PID Controller started.')
 
+    def reset_tree(self, botid):
+        tree = self.trees[botid]
+        tree.root.stop(Status.INVALID)  # clear states
+        # self.trees[botid] = self.setup_tree_for_bot(botid)  # recreate the BT if needed
+        self.get_logger().info(f"Tree for bot {botid} restarted from beginning")
+
+
     def tick_trees(self):
         completed_trees = []
 
         for botid,tree in self.trees.items():
             tree.tick()
+
+            check_node = tree.root.children[-2]
+            if check_node.status == Status.RUNNING:
+                self.reset_tree(botid)
+                return
+
             result = tree.root.status
             if result == Status.SUCCESS:
                 completed_trees.append(botid)
@@ -633,6 +669,7 @@ class HolonomicPIDController(Node):
         pick_crate = pickup_crate('pick',main_node=self,botid=botid)
         navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
         drope_crate = drop_crate('drop',main_node=self,botid=botid)
+        check_other = check_other_asssign('check_other_asssign',main_node=self,botid=botid)
         docks = dock('dock',main_node=self,botid=botid)
 
         root.add_children([
@@ -641,6 +678,7 @@ class HolonomicPIDController(Node):
             pick_crate,
             navigate_drop,
             drope_crate,
+            check_other,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
@@ -713,11 +751,9 @@ class HolonomicPIDController(Node):
         self.unassigned_crates = list(all_crate_ids - self.assigned_crates)
         self.bot_to_crate = {bot_id: crate_id for bot_id, crate_id in self.assignments}
 
-
         self.tasks_assigned = True
         if hasattr(self, 'timer'):
             self.timer.cancel()
-
 
     def pose_crate_cb(self, msg):
         for self.current_pose_crates in msg.poses:
@@ -735,18 +771,8 @@ class HolonomicPIDController(Node):
         self.red_crates = list(self.red_dict.values())
         self.green_crates = list(self.green_dict.values())
         self.blue_crates = list(self.blue_dict.values())
-        self.no_of_red = len(self.red_crates)
-        self.no_of_blue = len(self.blue_crates)
-        self.no_of_green = len(self.green_crates)
         self.all_crates = self.red_crates + self.green_crates + self.blue_crates
         self.all_crates_dict = self.red_dict | self.green_dict | self.blue_dict
-
-        for botid, craeid in self.bot_to_crate.items():
-            color = self.crate_color_dict.get(craeid)
-            if color:
-                if botid not in self.color_to_bot[color]:
-                    self.color_to_bot[color].append(botid)
-
 
 
     def publish_wheel_velocities(self, wheel_vel):
