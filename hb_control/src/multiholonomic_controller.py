@@ -207,53 +207,10 @@ class pickup_crate(Behaviour):
         self.tick_count += 1
         self.tick_count_2 += 1
 
-        if self.bool:
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            print('i am coming here babssss')
-            
+        if self.bool:            
             self.crateid = self.main_node.bot_to_crate[self.botid]
             self.cratecolor = self.main_node.crate_color_dict[self.crateid]
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
-            print(self.cratecolor)
+
             req = AttachLink.Request()
             req.data = json.dumps({
                 "model1_name": f"hb_{self.botname}",
@@ -428,19 +385,10 @@ class drop_crate(Behaviour):
                 "link2_name": f"box_link_{self.crateid}"
                 })
 
-            # self.get_logger().info('Attach request sent, waiting for response...')
             future = self.main_node.detach_client.call_async(req)
             self.bool = False
             rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=1.0)
 
-            # if future.done() and future.result() is not None:
-            #     response = future.result()
-            #     if response.success:
-            #         self.get_logger().info(f"Attachment successful: {response.message}")
-            #     else:
-            #         self.get_logger().error(f"Attachment failed: {response.message}")
-            # else:
-            #     self.get_logger().error('Attach service call timed out or did not respond.')
         if self.tick_count < self.max_ticks:
             return py_trees.common.Status.RUNNING
 
@@ -625,8 +573,7 @@ class HolonomicPIDController(Node):
 
     def reset_tree(self, botid):
         tree = self.trees[botid]
-        tree.root.stop(Status.INVALID)  # clear states
-        # self.trees[botid] = self.setup_tree_for_bot(botid)  # recreate the BT if needed
+        tree.root.stop(Status.INVALID) 
         self.get_logger().info(f"Tree for bot {botid} restarted from beginning")
 
 
