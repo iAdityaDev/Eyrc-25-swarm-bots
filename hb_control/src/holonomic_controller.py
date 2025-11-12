@@ -144,7 +144,7 @@ class HolonomicPIDController(Node):
         if self.goals == None:
             self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw),
                           (1280.2,1219.2,0.0 ),
-                          (1219.2,205.0,0.0)]
+                          (1219.2,130.0,0.0)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
         # print(self.goals)    
 
@@ -165,17 +165,20 @@ class HolonomicPIDController(Node):
         if not self.goal_reached:
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
-            error_yaw = self.target_yaw-self.current_pose_bot_yaw
-            correction = -1.03 * self.current_pose_crate_yaw + 0.8
-            error_yaw += correction
+            target_yaw = math.atan2(error_y,error_x)
+            error_yaw = target_yaw - self.current_pose_bot_yaw - math.pi/2
+            # error_yaw = self.target_yaw-self.current_pose_bot_yaw
+            # correction = -1.03 * self.current_pose_crate_yaw + 0.8
+            # error_yaw += correction
             dist_error = math.sqrt(error_x**2 + error_y**2)
 
             while error_yaw > math.pi:
                 error_yaw -= 2 * math.pi    
             while error_yaw < -math.pi:
                 error_yaw += 2 * math.pi
-            print(error_x,error_y,error_yaw)
             # print(error_x,error_y,error_yaw)
+            # print(error_x,error_y,error_yaw)
+            print(dist_error)
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
             pid_yaw = self.pid_yaw.compute(error_yaw,dt)
@@ -196,13 +199,13 @@ class HolonomicPIDController(Node):
             # if error_y < 165:
             #     pid_y_robot = 0.0    
             if self.current_goal_wp == 0 :
-                if dist_error< 155 and abs(error_yaw) <0.07:
+                if dist_error< 150 and abs(error_yaw) <0.13:
                     self.goal_reached = True
                 if dist_error < 145:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
             elif self.current_goal_wp == 1 :
-                if dist_error< 125 :
+                if dist_error< 150 :
                     self.goal_reached = True
             else :
                 if abs(error_x) < 2.0 and abs(error_y) < 2.0 and abs(error_yaw) < 0.1:
@@ -221,7 +224,7 @@ class HolonomicPIDController(Node):
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
                 time.sleep(4.0)
                 req = AttachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_27", "link2_name": "box_link_27"}'
+                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_48", "link2_name": "box_link_48"}'
 
                 self.get_logger().info('Attach request sent, waiting for response...')
                 future = self.attach_client.call_async(req)
@@ -243,7 +246,7 @@ class HolonomicPIDController(Node):
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
                 time.sleep(4.0)
                 req = DetachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_27", "link2_name": "box_link_27"}'
+                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_48", "link2_name": "box_link_48"}'
 
                 self.get_logger().info('Dettach request sent, waiting for response...')
                 future = self.detach_client.call_async(req)

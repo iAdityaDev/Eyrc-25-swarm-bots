@@ -229,6 +229,7 @@ class pickup_crate(Behaviour):
             #     if response.success:
             #         self.get_logger().info(f"Attachment successful: {response.message}")
             #     else:
+            
             #         self.get_logger().error(f"Attachment failed: {response.message}")
             # else:
             #     self.get_logger().error('Attach service call timed out or did not respond.')
