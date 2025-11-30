@@ -8,6 +8,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+import matplotlib.pyplot as plt
 
 class CameraTester(Node):
     def __init__(self):
@@ -151,7 +152,9 @@ class CameraTester(Node):
         
         while True:
             ret, frame = self.cap.read()
-            
+
+            frame = frame[:,500:1400]
+            # frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             if not ret:
                 print("Failed to capture frame")
                 break
@@ -182,7 +185,9 @@ class CameraTester(Node):
             
             # Display frame
             cv2.namedWindow('Camera Test', cv2.WINDOW_NORMAL)
-            cv2.resizeWindow('Camera Test', 600, 400)
+            cv2.resizeWindow('Camera Test', 1000, 1000)
+            # plt.imshow('Camera Test')
+            # plt.show()
             cv2.imshow('Camera Test', frame)
             
             # Publish frame to ROS2 topic
