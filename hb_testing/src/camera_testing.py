@@ -13,7 +13,7 @@ class CameraTester(Node):
     def __init__(self):
         super().__init__('camera_tester_node')
         
-        self.CAMERA_ID = 'video2'
+        self.CAMERA_ID = 'video0'
         self.bridge = CvBridge()
         
         # Create publisher for /image_raw topic
@@ -36,15 +36,17 @@ class CameraTester(Node):
             print(result.stdout)
 
             print("\nAttempting to set camera to 1920x1080 MJPG...")
+
             subprocess.run(
                 ["v4l2-ctl", "-d", f"/dev/{self.CAMERA_ID}", "--set-fmt-video=width=1920,height=1080,pixelformat=MJPG"]
             )
+
             subprocess.run(["v4l2-ctl", "-d", f"/dev/{self.CAMERA_ID}", "-c", "auto_exposure=1"])
         except subprocess.CalledProcessError as e:
             print(f"Warning: v4l2-ctl command failed: {e}")
 
         # Open camera
-        print(f"\nOpening camera /dev/{self.CAMERA_ID}...")
+
         self.cap = cv2.VideoCapture(int(self.CAMERA_ID[-1]))
         
         # Set MJPG format
@@ -180,6 +182,7 @@ class CameraTester(Node):
             
             # Display frame
             cv2.namedWindow('Camera Test', cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('Camera Test', 600, 400)
             cv2.imshow('Camera Test', frame)
             
             # Publish frame to ROS2 topic
