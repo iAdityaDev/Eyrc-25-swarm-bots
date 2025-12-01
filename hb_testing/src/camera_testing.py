@@ -153,7 +153,7 @@ class CameraTester(Node):
         while True:
             ret, frame = self.cap.read()
 
-            frame = frame[:,500:1400]
+            frame = frame[20:920,500:1420]
             # frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
             if not ret:
                 print("Failed to capture frame")
