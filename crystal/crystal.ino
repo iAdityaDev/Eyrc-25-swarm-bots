@@ -11,11 +11,11 @@ const int broker_port = 1883;
 #define CLIENT_ID "ESPcrystal"
 #define CMD_TOPIC "esp/cmd/crystal"
 #define SENSOR_TOPIC "esp/sensor/1"
-// //  forcfrostbite
+// // frostbite
 // #define CLIENT_ID "ESPfrostbite"
 // #define CMD_TOPIC "esp/cmd/frostbite"
 
-// //  fofrostbiter
+// // glacio
 // #define CLIENT_ID "ESPglacio"
 // #define CMD_TOPIC "esp/cmd/glacio"
 
