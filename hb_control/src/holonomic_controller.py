@@ -9,6 +9,9 @@ from linkattacher_msgs.srv import AttachLink , DetachLink
 import numpy as np
 import math
 import time
+import paho.mqtt.client as mqtt
+import sys
+import json
 
 # ros2 service call /attach_link linkattacher_msgs/srv/AttachLink "{
 #   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_17\"}'
@@ -22,6 +25,7 @@ class PID:
         self.max_out = max_out   # velocity cap 
         self.integral = 0.0
         self.prev_error = 0.0
+
 
     def compute(self, error, dt):
         derivative = (error-self.prev_error)/dt
@@ -45,6 +49,31 @@ class HolonomicPIDController(Node):
         super().__init__('holonomic_pid_controller')  # initializing ros node
         self.get_logger().info('HolonomicPIDController is created')
 
+        broker_ip = "localhost"
+        self.mqtt_client = mqtt.Client()
+
+        def on_connect(client, userdata, flags, rc):
+            if rc == 0:
+                print("Connected to broker")
+                client.publish("esp/led", "LED_ON", qos=1)
+                print("Sent LED_ON command")
+            else:
+                print(f"Connection failed with code {rc}")
+                sys.exit(1)
+
+        def on_message(client, userdata, msg):
+            print(f"[{msg.topic}] {msg.payload.decode()}")
+
+        def on_disconnect(client, userdata, rc):
+            print("Disconnected from broker")
+
+        self.mqtt_client.on_connect = on_connect
+        self.mqtt_client.on_message = on_message
+        self.mqtt_client.on_disconnect = on_disconnect
+        self.mqtt_client.connect(broker_ip,1883,60)
+
+        self.mqtt_client.loop_start() 
+
         self.bot_pose = self.create_subscription(Poses2D, 
                                                  "/bot_pose", 
                                                  self.pose_cb,
@@ -59,13 +88,13 @@ class HolonomicPIDController(Node):
                                                '/bot_cmd',
                                                10)
         
-        self.attach_client = self.create_client(AttachLink, '/attach_link')
-        while not self.attach_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('wits attach_link service...')
+        # self.attach_client = self.create_client(AttachLink, '/attach_link')
+        # while not self.attach_client.wait_for_service(timeout_sec=1.0):
+        #     self.get_logger().info('wits attach_link service...')
 
-        self.detach_client = self.create_client(DetachLink, '/detach_link')
-        while not self.detach_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('wits deattach_link service...')
+        # self.detach_client = self.create_client(DetachLink, '/detach_link')
+        # while not self.detach_client.wait_for_service(timeout_sec=1.0):
+        #     self.get_logger().info('wits deattach_link service...')
 
         self.current_pose_bot = None
         self.current_pose_crate = None
@@ -285,7 +314,7 @@ class HolonomicPIDController(Node):
         # Order: [Left wheel speed, Right wheel speed, Rear wheel speed]
         msg = BotCmdArray()
         cmd = BotCmd()
-        cmd.id = 0
+        cmd.id = 2
         cmd.m1 = wheel_vel[0]
         cmd.m2 = wheel_vel[1]
         cmd.m3 = wheel_vel[2]
@@ -294,6 +323,16 @@ class HolonomicPIDController(Node):
         msg.cmds = [cmd]
 
         self.publisher.publish(msg)
+        data =  {
+            "id": cmd.id,
+            "m1":cmd.m1,
+            "m2":cmd.m2,
+            "m3":cmd.m3,
+            "base":cmd.base,
+            "elbow":cmd.elbow
+        }
+        print(json.dumps(data))
+        self.mqtt_client.publish("esp/bot_cmd", json.dumps(data))
 
 
 def main(args=None):

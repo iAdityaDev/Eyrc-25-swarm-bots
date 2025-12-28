@@ -1,23 +1,28 @@
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include <string.h>
+#include <ArduinoJson.h>
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
 const char* broker_ip = "10.120.17.233";
 const int broker_port = 1883;
 
-//  for crystal
-#define CLIENT_ID "ESPcrystal"
-#define CMD_TOPIC "esp/cmd/crystal"
-#define SENSOR_TOPIC "esp/sensor/1"
-// // frostbite
-// #define CLIENT_ID "ESPfrostbite"
-// #define CMD_TOPIC "esp/cmd/frostbite"
+#define BOT_ID 0   // 0=crystal, 2=frostbite, 4=glacio
 
-// // glacio
-// #define CLIENT_ID "ESPglacio"
-// #define CMD_TOPIC "esp/cmd/glacio"
+#if BOT_ID == 0
+  #define CLIENT_ID "ESPcrystal"
+#elif BOT_ID == 2
+  #define CLIENT_ID "ESPfrostbite"
+#elif BOT_ID == 4
+  #define CLIENT_ID "ESPglacio"
+#else
+  #error "Invalid BOT_ID"
+#endif
+
+#define CMD_TOPIC "esp/bot_cmd"
+#define LED_TOPIC    "esp/led"
+#define SENSOR_TOPIC "esp/sensor/1"
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -42,10 +47,29 @@ static inline void setup_wifi(){
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message arrived on topic: ");
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, payload, length);
     Serial.println(topic);
-    payload[length] = '\0'; // Null terminate
-    String message = String((char*)payload);
-    if (strcmp(topic, CMD_TOPIC) == 0) {
+
+    if (strcmp(topic,CMD_TOPIC) == 0){
+        int id = doc["id"];
+        float m1 = doc["m1"];
+        float m2 = doc["m2"];
+        float m3 = doc["m3"];
+        float base = doc["base"];
+        float elbow = doc["elbow"];
+        if (BOT_ID == id){
+            Serial.println(m1);
+            Serial.println(m2);
+            Serial.println(m3);
+            Serial.println(base);
+            Serial.println(elbow);
+        }
+    }
+
+    if (strcmp(topic, LED_TOPIC) == 0) {
+        payload[length] = '\0'; // Null terminate
+        String message = String((char*)payload);
         Serial.print("Command received: ");
         Serial.println(message);
         if (message == "LED_ON") {
@@ -63,6 +87,7 @@ void reconnect() {
         Serial.print("Attempting MQTT connection...");
         if (mqttClient.connect(CLIENT_ID)) {
             Serial.println("connected");
+            mqttClient.subscribe(LED_TOPIC);
             mqttClient.subscribe(CMD_TOPIC);
             Serial.println(F("Subscribed to command topic."));
         } else {
@@ -74,13 +99,13 @@ void reconnect() {
     }
 }
 
-void publishSensorData() {
-    float temperature = analogRead(34) * (3.3 / 4095.0) * 100; // Placeholder for LM35-like sensor
-    String payload = String(temperature, 2);
-    mqttClient.publish(SENSOR_TOPIC, payload.c_str());
-    Serial.print("Published temperature: ");
-    Serial.println(payload);
-}
+// void publishSensorData() {
+//     float temperature = analogRead(34) * (3.3 / 4095.0) * 100; // Placeholder for LM35-like sensor
+//     String payload = String(temperature, 2);
+//     mqttClient.publish(SENSOR_TOPIC, payload.c_str());
+//     Serial.print("Published temperature: ");
+//     Serial.println(payload);
+// }
 
 void setup() {
     Serial.begin(115200);
@@ -96,9 +121,9 @@ void loop() {
         reconnect();
     }
     mqttClient.loop();
-    static unsigned long lastMsg = 0;
-    if (millis() - lastMsg > 2000) {
-        lastMsg = millis();
-        publishSensorData();
-    }
+    // static unsigned long lastMsg = 0;
+    // if (millis() - lastMsg > 2000) {
+    //     lastMsg = millis();
+    //     publishSensorData();
+    // }
 }
