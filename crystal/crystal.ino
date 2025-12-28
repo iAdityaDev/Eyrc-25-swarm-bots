@@ -2,6 +2,19 @@
 #include "PubSubClient.h"
 #include <string.h>
 #include <ArduinoJson.h>
+#include <ESP32Servo.h>
+
+Servo servo1; 
+Servo servo2; 
+Servo servo3;
+Servo base_servo;
+Servo elbow_servo; 
+
+#define servo1_pin 27
+#define servo2_pin 26
+#define servo3_pin 25
+#define base_servo_pin 33
+#define elbow_servo_pin 13
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
@@ -109,8 +122,14 @@ void reconnect() {
 
 void setup() {
     Serial.begin(115200);
+    servo1.attach(servo1_pin);
+    servo2.attach(servo2_pin);
+    servo3.attach(servo3_pin);
+    base_servo.attach(base_servo_pin);
+    elbow_servo.attach(elbow_servo_pin);
     pinMode(2,OUTPUT);
     digitalWrite(2,LOW);
+    
     setup_wifi();
     mqttClient.setServer(broker_ip,broker_port);
     mqttClient.setCallback(mqttCallback);
