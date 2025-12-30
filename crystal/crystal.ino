@@ -3,15 +3,19 @@
 #include <string.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
+#include <Arduino.h>
 
 #define BOT_ID 0   // 0=crystal, 2=frostbite, 4=glacio
 
 #if BOT_ID == 0
   #define CLIENT_ID "ESPcrystal"
+  #define ELEC_TOPIC "esp/crystal_elec"
 #elif BOT_ID == 2
   #define CLIENT_ID "ESPfrostbite"
+  #define ELEC_TOPIC "esp/frostbite_elec"
 #elif BOT_ID == 4
   #define CLIENT_ID "ESPglacio"
+  #define ELEC_TOPIC "esp/glacio_elec"
 #else
   #error "Invalid BOT_ID"
 #endif
@@ -27,6 +31,11 @@ Servo elbow_servo;
 #define servo3_pin 25
 #define base_servo_pin 33
 #define elbow_servo_pin 32
+
+const int ELEC_PIN = 23;
+const int PWM_CHANNEL = 0;
+const int PWM_FREQ = 1000;    // 1 kHz
+const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 
 #define NEUTRAL 1500
 #define STOP_MIN 1446
@@ -81,14 +90,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         float base = doc["base"];
         float elbow = doc["elbow"];
         if (BOT_ID == id){
-            Serial.println(m1);
-            Serial.println(m2);
-            Serial.println(m3);
-            Serial.println(base);
-            Serial.println(elbow);
+            // Serial.println(m1);
+            // Serial.println(m2);
+            // Serial.println(m3);
+            // Serial.println(base);
+            // Serial.println(elbow);
             servo1.writeMicroseconds(velocityToPWM(-m1));
             servo2.writeMicroseconds(velocityToPWM(m2));
             servo3.writeMicroseconds(velocityToPWM(-m3));
+            base_servo.write(base);
+            elbow_servo.write(elbow);
         }
     }
 
@@ -105,6 +116,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             Serial.println("LED turned OFF");
         }
     }
+
+    if (strcmp(topic,ELEC_TOPIC) == 0){
+        payload[length] = '\0';
+        String message = String((char*)payload);
+        Serial.print("Command received: ");
+        Serial.println(message);
+        if (message == "TRUE") {
+            ledcWrite(ELEC_PIN, 254);
+            Serial.println("ELEC turned ON");
+        } else if (message == "FALSE") {
+            ledcWrite(ELEC_PIN,0);
+            Serial.println("ELEC turned OFF");
+        }
+        
+    }
 }
 
 void reconnect() {
@@ -114,6 +140,7 @@ void reconnect() {
             Serial.println("connected");
             mqttClient.subscribe(LED_TOPIC);
             mqttClient.subscribe(CMD_TOPIC);
+            mqttClient.subscribe(ELEC_TOPIC);
             Serial.println(F("Subscribed to command topic."));
         } else {
             Serial.print("failed, rc=");
@@ -124,13 +151,6 @@ void reconnect() {
     }
 }
 
-// void publishSensorData() {
-//     float temperature = analogRead(34) * (3.3 / 4095.0) * 100; // Placeholder for LM35-like sensor
-//     String payload = String(temperature, 2);
-//     mqttClient.publish(SENSOR_TOPIC, payload.c_str());
-//     Serial.print("Published temperature: ");
-//     Serial.println(payload);
-// }
 int velocityToPWM(float vel) {
     vel = constrain(vel, -MAX_VEL, MAX_VEL);
 
@@ -139,18 +159,14 @@ int velocityToPWM(float vel) {
     int pulse;
 
     if (vel > 0) {
-        // Map velocity to [STOP_MAX → MAX_FWD]
         pulse = STOP_MAX +
                 (vel / MAX_VEL) * (MAX_FWD - STOP_MAX);
     } else {
-        // Map velocity to [STOP_MIN → MAX_REV]
         pulse = STOP_MIN +
                 (vel / MAX_VEL) * (STOP_MIN - MAX_REV);
     }
-
     return constrain(pulse, MAX_REV, MAX_FWD);
 }
-
 
 void setup() {
     Serial.begin(115200);
@@ -159,9 +175,13 @@ void setup() {
     servo3.attach(servo3_pin);
     base_servo.attach(base_servo_pin);
     elbow_servo.attach(elbow_servo_pin);
+
     pinMode(2,OUTPUT);
     digitalWrite(2,LOW);
     
+    ledcAttach(ELEC_PIN, PWM_FREQ, PWM_RES);
+    ledcWrite(ELEC_PIN, 0); 
+
     setup_wifi();
     mqttClient.setServer(broker_ip,broker_port);
     mqttClient.setCallback(mqttCallback);
@@ -172,9 +192,4 @@ void loop() {
         reconnect();
     }
     mqttClient.loop();
-    // static unsigned long lastMsg = 0;
-    // if (millis() - lastMsg > 2000) {
-    //     lastMsg = millis();
-    //     publishSensorData();
-    // }
 }
