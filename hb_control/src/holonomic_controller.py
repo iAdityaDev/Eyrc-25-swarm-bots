@@ -314,7 +314,7 @@ class HolonomicPIDController(Node):
         # Order: [Left wheel speed, Right wheel speed, Rear wheel speed]
         msg = BotCmdArray()
         cmd = BotCmd()
-        cmd.id = 2
+        cmd.id = 0
         cmd.m1 = wheel_vel[0]
         cmd.m2 = wheel_vel[1]
         cmd.m3 = wheel_vel[2]

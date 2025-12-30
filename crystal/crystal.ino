@@ -4,23 +4,6 @@
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 
-Servo servo1; 
-Servo servo2; 
-Servo servo3;
-Servo base_servo;
-Servo elbow_servo; 
-
-#define servo1_pin 27
-#define servo2_pin 26
-#define servo3_pin 25
-#define base_servo_pin 33
-#define elbow_servo_pin 13
-
-const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
-const char* password = "123456789";
-const char* broker_ip = "10.120.17.233";
-const int broker_port = 1883;
-
 #define BOT_ID 0   // 0=crystal, 2=frostbite, 4=glacio
 
 #if BOT_ID == 0
@@ -32,6 +15,32 @@ const int broker_port = 1883;
 #else
   #error "Invalid BOT_ID"
 #endif
+
+Servo servo1; 
+Servo servo2; 
+Servo servo3;
+Servo base_servo;
+Servo elbow_servo; 
+
+#define servo1_pin 27
+#define servo2_pin 26
+#define servo3_pin 25
+#define base_servo_pin 33
+#define elbow_servo_pin 32
+
+#define NEUTRAL 1500
+#define STOP_MIN 1446
+#define STOP_MAX 1542
+
+#define MAX_FWD 1900
+#define MAX_REV 1100
+
+#define MAX_VEL 80.0
+
+const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
+const char* password = "123456789";
+const char* broker_ip = "10.120.17.233";
+const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"
 #define LED_TOPIC    "esp/led"
@@ -77,6 +86,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             Serial.println(m3);
             Serial.println(base);
             Serial.println(elbow);
+            servo1.writeMicroseconds(velocityToPWM(-m1));
+            servo2.writeMicroseconds(velocityToPWM(m2));
+            servo3.writeMicroseconds(velocityToPWM(-m3));
         }
     }
 
@@ -119,6 +131,26 @@ void reconnect() {
 //     Serial.print("Published temperature: ");
 //     Serial.println(payload);
 // }
+int velocityToPWM(float vel) {
+    vel = constrain(vel, -MAX_VEL, MAX_VEL);
+
+    if (vel == 0) return NEUTRAL;
+
+    int pulse;
+
+    if (vel > 0) {
+        // Map velocity to [STOP_MAX → MAX_FWD]
+        pulse = STOP_MAX +
+                (vel / MAX_VEL) * (MAX_FWD - STOP_MAX);
+    } else {
+        // Map velocity to [STOP_MIN → MAX_REV]
+        pulse = STOP_MIN +
+                (vel / MAX_VEL) * (STOP_MIN - MAX_REV);
+    }
+
+    return constrain(pulse, MAX_REV, MAX_FWD);
+}
+
 
 void setup() {
     Serial.begin(115200);

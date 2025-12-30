@@ -31,18 +31,18 @@ class PoseDetector(Node):
         self.aruco_dict_name = 'DICT_4X4_50'  # Choose ArUco dictionary
         
         # ---------- TOPICS ----------
-        self.image_sub = self.create_subscription(Image, "/camera/image_raw", self.image_callback, 10)
+        self.image_sub = self.create_subscription(Image, "camera/image_raw", self.image_callback, 10)
         self.crate_poses_pub = self.create_publisher(Poses2D, '/crate_pose', 10)
         self.bot_poses_pub = self.create_publisher(Poses2D, '/bot_pose', 10)
         
         # ---------- CAMERA PARAMETERS ----------
         self.camera_matrix = np.array([
-                [1030.4890823364258, 0.0, 960.0],
-                [0.0, 1030.489103794098, 540.0],
+                [1211.388318 ,0.000000 ,931.630328],
+                [0.000000 ,1219.972007 ,447.211953],
                 [0.0, 0.0, 1.0]
             ], dtype=np.float32)
 
-        self.dist_coeffs = np.zeros((5, 1), dtype=np.float32) 
+        self.dist_coeffs = np.array([0.029478, -0.076199, 0.013779, -0.001195, 0.000000]) 
         
         # ---------- IMAGE MATRICES ----------
         self.pixel_matrix = [[446.0, 27.0],[1474.0,26.0],[445.0,1055.0],[1475.0, 1055.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
