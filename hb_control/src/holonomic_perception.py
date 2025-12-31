@@ -53,25 +53,26 @@ class PoseDetector(Node):
  # derive world points matrix [[x1,y1], [x2,y2], ...]
         self.H_matrix = None    # compute homography matrix using cv2.findHomography
         
-        # ---------- ARUCO SETUP ----------
-        # Initialize ArUco detector
-        # self.aruco_dict = cv2.aruco.getPredefinedDictionary(?)
-        # self.aruco_params = cv2.aruco.DetectorParameters()
-        # self.detector = cv2.aruco.ArucoDetector(?, ?)
 
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.aruco_params = cv2.aruco.DetectorParameters()
 
-        
-        # self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-        # self.aruco_params.minMarkerPerimeterRate = 0.005
-        # self.aruco_params.adaptiveThreshWinSizeMax = 43   # increased
+        # 1. Allow for tiny markers (smaller than 0.5% of the frame)
+        self.aruco_params.minMarkerPerimeterRate = 0.001 
 
-        # self.aruco_params.maxMarkerPerimeterRate = 6.0
+        # 2. Make the search grid much finer
+        self.aruco_params.adaptiveThreshWinSizeMin = 3
+        self.aruco_params.adaptiveThreshWinSizeMax = 23
+        self.aruco_params.adaptiveThreshWinSizeStep = 2  # CRITICAL: Finer steps
 
-        # self.aruco_params.polygonalApproxAccuracyRate = 0.11
+        # 3. Increase the threshold constant to ignore small image noise
+        self.aruco_params.adaptiveThreshConstant = 10 
 
+        # 4. Critical for small markers: Subpixel refinement
+        self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.aruco_params.cornerRefinementWinSize = 3
         self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+        
 
         self.x_real_1 = np.array([1218.84,298.2,498.2, 1219.2, 1219.2,819.2,869.2]) 
         self.x_est_1 = np.array([1219.2,274.46,478.98, 1218.86, 1218.85, 808.45,864.94]) 
@@ -126,6 +127,7 @@ class PoseDetector(Node):
 
         return x_world, y_world
 
+
     def image_callback(self):
         """
         Callback function for the image subscriber.
@@ -163,8 +165,11 @@ class PoseDetector(Node):
 
                 
                 gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-                clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(6,6))
+                clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8,8))
                 gray = clahe.apply(gray)
+                # gray = cv2.equalizeHist(gray)
+                # gray = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                #              cv2.THRESH_BINARY, 11, 2)
 
                 
             #     # Step 3: Detect all the markers in the world
