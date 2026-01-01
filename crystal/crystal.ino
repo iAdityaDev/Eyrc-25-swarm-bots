@@ -55,6 +55,8 @@ const int broker_port = 1883;
 #define LED_TOPIC    "esp/led"
 #define SENSOR_TOPIC "esp/sensor/1"
 
+static float v1=0, v2=0, v3=0 ,base_angle=0,elbow_angle=0;
+
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
@@ -95,9 +97,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             // Serial.println(m3);
             // Serial.println(base);
             // Serial.println(elbow);
-            servo1.writeMicroseconds(velocityToPWM(-m1));
-            servo2.writeMicroseconds(velocityToPWM(m2));
-            servo3.writeMicroseconds(velocityToPWM(-m3));
+            
+            v1 = smoothVel(m1, v1);
+            v2 = smoothVel(m2, v2);
+            v3 = smoothVel(m3, v3);
+
+            servo1.writeMicroseconds(velocityToPWM(-v1));
+            servo2.writeMicroseconds(velocityToPWM(v2));
+            servo3.writeMicroseconds(velocityToPWM(-v3));
             base_servo.write(base);
             elbow_servo.write(elbow);
         }
@@ -149,6 +156,15 @@ void reconnect() {
             delay(5000);
         }
     }
+}
+
+
+float smoothVel(float target, float &current) {
+    if (target == 0.0) return target ;                          
+    float step = 5.0; // limit per cycle
+    if (target > current) current += step;
+    else if (target < current) current -= step;
+    return current;
 }
 
 int velocityToPWM(float vel) {
