@@ -88,14 +88,6 @@ class HolonomicPIDController(Node):
                                                '/bot_cmd',
                                                10)
         
-        # self.attach_client = self.create_client(AttachLink, '/attach_link')
-        # while not self.attach_client.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info('wits attach_link service...')
-
-        # self.detach_client = self.create_client(DetachLink, '/detach_link')
-        # while not self.detach_client.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info('wits deattach_link service...')
-
         self.current_pose_bot = None
         self.current_pose_crate = None
         self.goals = None
@@ -150,7 +142,7 @@ class HolonomicPIDController(Node):
 
 
         self.timer = self.create_timer(0.3, self.control_cb) 
-
+        self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
 
@@ -243,54 +235,29 @@ class HolonomicPIDController(Node):
             # pose = np.array([pid_x,pid_y,pid_yaw])
             pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
             s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
+            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+
             #  1 blue 
             # 2 red 
             # 3 green
         if self.goal_reached:
 
             if self.current_goal_wp == 0:
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
                 time.sleep(4.0)
-                req = AttachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_48", "link2_name": "box_link_48"}'
+                
 
-                self.get_logger().info('Attach request sent, waiting for response...')
-                future = self.attach_client.call_async(req)
-                rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
-
-                if future.done() and future.result() is not None:
-                    response = future.result()
-                    if response.success:
-                        self.get_logger().info(f"Attachment successful: {response.message}")
-                    else:
-                        self.get_logger().error(f"Attachment failed: {response.message}")
-                else:
-                    self.get_logger().error('Attach service call timed out or did not respond.')
-
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,45.0,45.0])
+                self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
                 time.sleep(4.0)
 
             if self.current_goal_wp == 1:
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,90.0,90.0])
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
                 time.sleep(4.0)
-                req = DetachLink.Request()
-                req.data = '{"model1_name": "hb_crystal", "link1_name": "arm_link_2", "model2_name": "crate_red_48", "link2_name": "box_link_48"}'
 
-                self.get_logger().info('Dettach request sent, waiting for response...')
-                future = self.detach_client.call_async(req)
-                rclpy.spin_until_future_complete(self, future, timeout_sec=10.0)
+                self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
 
-                if future.done() and future.result() is not None:
-                    response = future.result()
-                    if response.success:
-                        self.get_logger().info(f"Attachment successful: {response.message}")
-                    else:
-                        self.get_logger().error(f"Attachment failed: {response.message}")
-                else:
-                    self.get_logger().error('Attach service call timed out or did not respond.')
-
-                self.publish_wheel_velocities([0.0, 0.0, 0.0,0.0,180.0])
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
                 time.sleep(4.0)
 
             self.get_logger().info('changign to next goal')
@@ -300,7 +267,7 @@ class HolonomicPIDController(Node):
             print(self.current_goal_wp)
             if self.current_goal_wp ==3:
                 self.get_logger().info('all th points reached')
-                wheel_velocities = [0.0, 0.0, 0.0,45.0,45.0]
+                wheel_velocities = [0.0, 0.0, 0.0,180.0,180.0]
             if self.current_goal_wp < len(self.goals):
                 self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
             self.pid_x.reset()

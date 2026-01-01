@@ -1,5 +1,5 @@
 mosquitto_pub -h 10.120.17.233 -t esp/led -m "LED_ON"
 
-mosquitto_pub -h 10.120.17.233 -t esp/elec -m "TRUE"
+mosquitto_pub -h 10.120.17.233 -t esp/crystal_elec -m "TRUE"
 
-mosquitto_pub -h 10.120.17.233 -t esp/bot_cmd -m '{"id":0,"m1":100.0,"m2":100.0,"m3":100.0,"base":180,"elbow":180}'
+mosquitto_pub -h 10.120.17.233 -t esp/bot_cmd -m '{"id":0,"m1":0.0,"m2":0.0,"m3":0.0,"base":180,"elbow":180}'
