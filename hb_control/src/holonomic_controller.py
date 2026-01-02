@@ -248,6 +248,7 @@ class HolonomicPIDController(Node):
                 
 
                 self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
+                time.sleep(4.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
                 time.sleep(4.0)
 
