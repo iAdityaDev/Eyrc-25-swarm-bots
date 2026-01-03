@@ -36,16 +36,26 @@ class PoseDetector(Node):
         self.bot_poses_pub = self.create_publisher(Poses2D, '/bot_pose', 10)
         
         # ---------- CAMERA PARAMETERS ----------
-        self.camera_matrix = np.array([
-                [1030.4890823364258, 0.0, 960.0],
-                [0.0, 1030.489103794098, 540.0],
-                [0.0, 0.0, 1.0]
-            ], dtype=np.float32)
+        # self.camera_matrix = np.array([
+        #         [1030.4890823364258, 0.0, 960.0],
+        #         [0.0, 1030.489103794098, 540.0],
+        #         [0.0, 0.0, 1.0]
+        #     ], dtype=np.float32)
 
         self.dist_coeffs = np.zeros((5, 1), dtype=np.float32) 
         
+        self.camera_matrix = np.array([
+                [1462.754630, 0.000000, 1184.466738],
+                [0.000000 ,1455.002478, 607.098410],
+                [0.0, 0.0, 1.0]
+            ], dtype=np.float32)
+
+        # self.dist_coeffs = np.array([0.272382 ,-0.373173 ,0.037508 ,0.024769, 0.000000]) 
+
         # ---------- IMAGE MATRICES ----------
-        self.pixel_matrix = [[446.0, 27.0],[1474.0,26.0],[445.0,1055.0],[1475.0, 1055.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
+        # self.pixel_matrix = [[446.0, 27.0],[1474.0,26.0],[445.0,1055.0],[1475.0, 1055.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
+        self.pixel_matrix = [[79.0, 73.0],[1003.0,73.0],[61.0,1000.0],[1004.0, 1013.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
+    
         self.world_matrix = [[0,0],[2438.4, 0],[0, 2438.4],[2438.4, 2438.4]]  # derive world points matrix [[x1,y1], [x2,y2], ...]
         self.H_matrix = None    # compute homography matrix using cv2.findHomography
      
@@ -70,6 +80,19 @@ class PoseDetector(Node):
         # self.aruco_params.maxMarkerPerimeterRate = 6.0
 
         # self.aruco_params.polygonalApproxAccuracyRate = 0.11
+
+        self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
+        self.aruco_params.cornerRefinementWinSize = 5
+        self.aruco_params.cornerRefinementMaxIterations = 30
+        self.aruco_params.minMarkerPerimeterRate = 0.02   # default ~0.03 (too big for small markers)
+        self.aruco_params.maxMarkerPerimeterRate = 4.0
+        self.aruco_params.adaptiveThreshWinSizeMin = 3
+        self.aruco_params.adaptiveThreshWinSizeMax = 35
+        self.aruco_params.adaptiveThreshWinSizeStep = 4 
+
+        self.aruco_params.polygonalApproxAccuracyRate = 0.03
+        self.aruco_params.minCornerDistanceRate = 0.02
+
 
         self.detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
 
@@ -138,10 +161,8 @@ class PoseDetector(Node):
         8) Publish the bot pose and crate poses using the given custom message type
         """
         try:
-            # Step 1: Convert ROS Image -> cv image using CvBridge
-            # Use self.bridge.imgmsg_to_cv2() to convert ROS image to OpenCV format
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            
+            cv_image = cv_image[:,380:1450]
             # Step 2: Undistort the image using camera intrinsics
             # Use cv2.undistort() with camera_matrix and dist_coeffs
             # Convert to grayscale for marker detection
@@ -154,7 +175,9 @@ class PoseDetector(Node):
 
             
             gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-            # clahe = cv2.createCLAHE(clipLimit=12.0, tileGridSize=(1,1))
+            gray = cv2.GaussianBlur(gray, (1,1), 0)
+
+            # clahe = cv2.createCLAHE(clipLimit=12.0, tileGridSize=(2,2))
             # gray = clahe.apply(gray)
            
  
@@ -170,7 +193,15 @@ class PoseDetector(Node):
             # # Use cv2.aruco.drawDetectedMarkers() to visualize detected markers
 
             corners, ids, rejected = self.detector.detectMarkers(gray)
-            
+
+            if ids is not None:
+                for i, marker_id in enumerate(ids.flatten()):
+                    if marker_id == 7:
+                        pts = corners[i][0]      # shape (4,2)
+                        cx = int(pts[:, 0].mean())
+                        cy = int(pts[:, 1].mean())
+                        # print("Center:", cx, cy)
+                            
             if ids is not None:
                cv2.aruco.drawDetectedMarkers(undistorted, corners, ids)
             
@@ -182,45 +213,45 @@ class PoseDetector(Node):
 
           
             
-            # self.pixel_matrix = np.array(self.pixel_matrix, dtype=np.float32)
-            # self.world_matrix = np.array(self.world_matrix, dtype=np.float32)
+            self.pixel_matrix = np.array(self.pixel_matrix, dtype=np.float32)
+            self.world_matrix = np.array(self.world_matrix, dtype=np.float32)
             
             # # Optional: Compute homography
             
             
             # # Step 5: Compute the Homography Matrix
             # # Use cv2.findHomography() with pixel and world points
-            # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 70, 0.0003)
-            # self.pixel_matrix = cv2.cornerSubPix(gray, self.pixel_matrix, (10,10), (-1,-1), criteria)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 70, 0.0003)
+            self.pixel_matrix = cv2.cornerSubPix(gray, self.pixel_matrix, (10,10), (-1,-1), criteria)
        
-            # self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 0.5)
+            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 0.5)
 
             # # Step 6: Convert center pixel of markers to world coordinates
             # # For each detected marker (excluding corner markers):
             # #       - Calculate center pixel coordinate
             # #       - Use pixel_to_world() to convert to world coordinates
             
-            # marker_world_coords = {}
-            # if ids is not None:
-            #     for i ,marker_id in enumerate(ids.flatten()):
-            #         marker_id = ids[i][0]
+            marker_world_coords = {}
+            if ids is not None:
+                for i ,marker_id in enumerate(ids.flatten()):
+                    marker_id = ids[i][0]
 
                 
-            #         if marker_id in [1, 3, 5, 7]:
-            #             continue
+                    if marker_id in [1, 3, 5, 7]:
+                        continue
 
-            #         pts = corners[i][0]  
-            #         center = pts.mean(axis=0)  # center pixel (x, y)
+                    pts = corners[i][0]  
+                    center = pts.mean(axis=0)  # center pixel (x, y)
 
                     
-            #         x_w, y_w = self.pixel_to_world(center[0], center[1])
+                    x_w, y_w = self.pixel_to_world(center[0], center[1])
 
                 
-            #         marker_world_coords[marker_id] = np.array([x_w, y_w])
+                    marker_world_coords[marker_id] = np.array([x_w, y_w])
 
-            #         cv2.circle(undistorted, (int(center[0]), int(center[1])), 5, (0,0,255), -1)
-            #         # cv2.putText(undistorted, f"{x_w:.1f}, {y_w:.1f}", (int(center[0])+10, int(center[1])),
-            #         #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+                    cv2.circle(undistorted, (int(center[0]), int(center[1])), 5, (0,0,255), -1)
+                    cv2.putText(undistorted, f"{x_w:.1f}, {y_w:.1f}", (int(center[0])+10, int(center[1])),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
 
 
             # # Step 7: Calculate yaw angle of each marker
@@ -233,72 +264,72 @@ class PoseDetector(Node):
 
                             
             
-            #         rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(corners, self.bots_marker_length, self.camera_matrix, self.dist_coeffs)
-            #         if marker_id in [1,3,5,7]:  
-            #             continue
-            #         rvec = rvecs[i][0]  
-            #         tvec = tvecs[i][0]
+                    rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(corners, self.bots_marker_length, self.camera_matrix, self.dist_coeffs)
+                    if marker_id in [1,3,5,7]:  
+                        continue
+                    rvec = rvecs[i][0]  
+                    tvec = tvecs[i][0]
                     
-            #         R, _ = cv2.Rodrigues(rvec)
+                    R, _ = cv2.Rodrigues(rvec)
 
-            #         yaw = math.atan2(R[1,0],R[0,0])
+                    yaw = math.atan2(R[1,0],R[0,0])
                 
 
-            #         # yaw_deg = (math.degrees(yaw) + 360) % 360
+                    # yaw_deg = (math.degrees(yaw) + 360) % 360
 
-            #         center = corners[i][0].mean(axis=0)
+                    center = corners[i][0].mean(axis=0)
                     
-            #         if marker_id == 0:
-            #             cv2.putText(
-            #                 undistorted,
-            #                 f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-            #                 (int(center[0]) + 10, int(center[1])),
-            #                 cv2.FONT_HERSHEY_SIMPLEX,
-            #                 0.6,
-            #                 (0, 0, 255),
-            #                 2
-            #             )
-            #         elif marker_id == 2:
-            #             cv2.putText(
-            #                 undistorted,
-            #                 f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-            #                 (int(center[0]) + 10, int(center[1]-20)),
-            #                 cv2.FONT_HERSHEY_SIMPLEX,
-            #                 0.6,
-            #                 (0, 0, 255),
-            #                 2
-            #             )
-            #         elif marker_id == 4:
-            #             cv2.putText(
-            #                 undistorted,
-            #                 f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-            #                 (int(center[0]) + 10, int(center[1]+20)),
-            #                 cv2.FONT_HERSHEY_SIMPLEX,
-            #                 0.6,
-            #                 (0, 0, 255),
-            #                 2
-            #             )
-            #         else:
-            #             cv2.putText(
-            #                     undistorted,
-            #                     f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-            #                     (int(center[0]) + 10, int(center[1])),
-            #                     cv2.FONT_HERSHEY_SIMPLEX,
-            #                     0.6,
-            #                     (0, 0, 255),
-            #                     2
-            #                 )
+                    if marker_id == 0:
+                        cv2.putText(
+                            undistorted,
+                            f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                            (int(center[0]) + 10, int(center[1])),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2
+                        )
+                    elif marker_id == 2:
+                        cv2.putText(
+                            undistorted,
+                            f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                            (int(center[0]) + 10, int(center[1]-20)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2
+                        )
+                    elif marker_id == 4:
+                        cv2.putText(
+                            undistorted,
+                            f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                            (int(center[0]) + 10, int(center[1]+20)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6,
+                            (0, 0, 255),
+                            2
+                        )
+                    else:
+                        cv2.putText(
+                                undistorted,
+                                f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                                (int(center[0]) + 10, int(center[1])),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.6,
+                                (0, 0, 255),
+                                2
+                            )
                         
-            #         if marker_id==0 or marker_id == 2 or marker_id == 4 :
-            #             bot_pose={
-            #             marker_id: (x_w, y_w, yaw),
-            #             }
-            #             self.publish_bot_poses(bot_pose)
-            #         else:    
-            #             crate_pose={
-            #             marker_id: (x_w, y_w, yaw),
-            #             }
-            #             self.publish_crate_poses(crate_pose)
+                    if marker_id==0 or marker_id == 2 or marker_id == 4 :
+                        bot_pose={
+                        marker_id: (x_w, y_w, yaw),
+                        }
+                        self.publish_bot_poses(bot_pose)
+                    else:    
+                        crate_pose={
+                        marker_id: (x_w, y_w, yaw),
+                        }
+                        self.publish_crate_poses(crate_pose)
                   
                     
 
