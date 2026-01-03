@@ -330,23 +330,6 @@ class PoseDetector(Node):
                         marker_id: (x_w, y_w, yaw),
                         }
                         self.publish_crate_poses(crate_pose)
-                  
-                    
-
-
-
-            
-
-            
-            # Step 8: Separate and publish poses
-            # Create separate dictionaries for bot_poses and crate_poses
-            # Call publish_crate_poses() and publish_bot_poses()
-            
-            
-        
-            # Display the image with detected markers
-            # cv2.imshow('Detected Markers', undistorted_image)
-            # cv2.waitKey(1)
             
             cv2.namedWindow("Gray Image", cv2.WINDOW_NORMAL)  
             cv2.resizeWindow("Gray Image", 1820, 1000)
@@ -358,18 +341,8 @@ class PoseDetector(Node):
             self.get_logger().error(f'Error processing image: {str(e)}')
 
     def publish_crate_poses(self, poses):
-        """
-        - Convert python pose dictionary -> message (Poses2D)
-        - self.crate_poses_pub.publish(msg)
-        """
-        # Create Poses2D message
-        # For each pose in poses list:
-        #       - Create Pose2D message
-        #       - Set id, x, y, w fields
-        #       - Append to poses message
-        # Publish the messag
+
         msg = Poses2D()
-        
         for marker_id, (x, y, w) in poses.items():
             
             pose = Pose2D()
@@ -380,19 +353,8 @@ class PoseDetector(Node):
             pose.w = float(w)
             msg.poses.append(pose)
         self.crate_poses_pub.publish(msg)
-        pass
 
     def publish_bot_poses(self, poses):
-        """
-        - Convert python pose dictionary -> message (Poses2D)
-        - self.bot_poses_pub.publish(msg)
-        """
-        # Create Poses2D message
-        # For each pose in poses list:
-        #       - Create Pose2D message
-        #       - Set id, x, y, w fields
-        #       - Append to poses message
-        # Publish the message
 
         msg = Poses2D()
         for marker_id, (x, y, w) in poses.items():
@@ -403,8 +365,6 @@ class PoseDetector(Node):
             pose.w = float(w)
             msg.poses.append(pose)
         self.bot_poses_pub.publish(msg)
-
-        pass
 
 def main(args=None):
     rclpy.init(args=args)

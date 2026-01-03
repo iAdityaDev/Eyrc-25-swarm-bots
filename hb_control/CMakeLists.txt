@@ -33,6 +33,7 @@ install(
   PROGRAMS src/holonomic_controller.py
   PROGRAMS src/multiholonomic_controller.py
   PROGRAMS src/lenovo_perception.py
+  PROGRAMS src/camera_feed.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
