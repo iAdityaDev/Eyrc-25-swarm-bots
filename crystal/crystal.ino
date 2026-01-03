@@ -5,7 +5,7 @@
 #include <ESP32Servo.h>
 #include <Arduino.h>
 
-#define BOT_ID 0   // 0=crystal, 2=frostbite, 4=glacio
+#define BOT_ID 0   // 0=crystal pink, 2=frostbite purple, 4=glacio red
 
 #if BOT_ID == 0
   #define CLIENT_ID "ESPcrystal"
