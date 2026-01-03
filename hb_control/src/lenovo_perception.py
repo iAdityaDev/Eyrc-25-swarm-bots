@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-This Python file runs a ROS 2 node named localization_node which publishes the position of crates and a holonomic drive robot.
-This node subscribes to the following topics:
- SUBSCRIPTIONS
- /camera/image_raw
- /camera/camera_info
- /crates_pose
- /bot_pose
-"""
+
 import math
 import cv2
 import numpy as np
@@ -22,7 +14,6 @@ class PoseDetector(Node):
     def __init__(self):
         super().__init__('localization_node')
         
-        # Initialize CvBridge for image conversion
         self.bridge = CvBridge()
         
         # ---------- PARAMETERS ----------
@@ -55,41 +46,23 @@ class PoseDetector(Node):
         # ---------- IMAGE MATRICES ----------
         # self.pixel_matrix = [[446.0, 27.0],[1474.0,26.0],[445.0,1055.0],[1475.0, 1055.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
         self.pixel_matrix = [[79.0, 73.0],[1003.0,73.0],[61.0,1000.0],[1004.0, 1013.0]]  # derive pixel points matrix [[x1,y1], [x2,y2], ...]
-    
         self.world_matrix = [[0,0],[2438.4, 0],[0, 2438.4],[2438.4, 2438.4]]  # derive world points matrix [[x1,y1], [x2,y2], ...]
+    
         self.H_matrix = None    # compute homography matrix using cv2.findHomography
-     
  
- # derive world points matrix [[x1,y1], [x2,y2], ...]
-        self.H_matrix = None    # compute homography matrix using cv2.findHomography
         
-        # ---------- ARUCO SETUP ----------
-        # Initialize ArUco detector
-        # self.aruco_dict = cv2.aruco.getPredefinedDictionary(?)
-        # self.aruco_params = cv2.aruco.DetectorParameters()
-        # self.detector = cv2.aruco.ArucoDetector(?, ?)
-
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.aruco_params = cv2.aruco.DetectorParameters()
 
         
-        # self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
-        # self.aruco_params.minMarkerPerimeterRate = 0.005
-        # self.aruco_params.adaptiveThreshWinSizeMax = 43   # increased
-
-        # self.aruco_params.maxMarkerPerimeterRate = 6.0
-
-        # self.aruco_params.polygonalApproxAccuracyRate = 0.11
-
         self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
         self.aruco_params.cornerRefinementWinSize = 5
         self.aruco_params.cornerRefinementMaxIterations = 30
-        self.aruco_params.minMarkerPerimeterRate = 0.02   # default ~0.03 (too big for small markers)
+        self.aruco_params.minMarkerPerimeterRate = 0.02   
         self.aruco_params.maxMarkerPerimeterRate = 4.0
         self.aruco_params.adaptiveThreshWinSizeMin = 3
         self.aruco_params.adaptiveThreshWinSizeMax = 35
         self.aruco_params.adaptiveThreshWinSizeStep = 4 
-
         self.aruco_params.polygonalApproxAccuracyRate = 0.03
         self.aruco_params.minCornerDistanceRate = 0.02
 
@@ -109,6 +82,13 @@ class PoseDetector(Node):
         self.y_est_2 = np.array([711.35,169.37,660.18,925,1040.0])
         self.a_x_2 , self.b_x_2 = np.polyfit(self.x_est_2,self.x_real_2,1)
         self.a_y_2 , self.b_y_2 = np.polyfit(self.y_est_2,self.y_real_2,1)
+
+        selfcorner_map = {
+            1: (0, 0),  # TL
+            3: (1, 1),  # TR
+            5: (2, 3),  # BL
+            7: (3, 2),  # BR
+        }
 
         self.get_logger().info('PoseDetector initialized')
 
@@ -130,17 +110,13 @@ class PoseDetector(Node):
 
         
         world_pt = cv2.perspectiveTransform(pixel_pt, self.H_matrix)  
-
-  
         x_world, y_world = world_pt[0][0]
 
         if (x_world>=0 and x_world<=1219.2) and (y_world>=0 and y_world<=1219.2):
-            
             x_world = self.a_x_1*x_world + self.b_x_1
             y_world = self.a_y_1*y_world + self.b_y_1
 
         if (x_world>1219.2 and x_world<=2438.4) and (y_world>=0 and y_world<=1219.2):
-            
             x_world = self.a_x_2*x_world + self.b_x_2
             y_world = self.a_y_2*y_world + self.b_y_2
 
@@ -194,19 +170,18 @@ class PoseDetector(Node):
 
             corners, ids, rejected = self.detector.detectMarkers(gray)
 
-            if ids is not None:
-                for i, marker_id in enumerate(ids.flatten()):
-                    if marker_id == 7:
-                        pts = corners[i][0]      # shape (4,2)
-                        cx = int(pts[:, 0].mean())
-                        cy = int(pts[:, 1].mean())
-                        # print("Center:", cx, cy)
                             
             if ids is not None:
                cv2.aruco.drawDetectedMarkers(undistorted, corners, ids)
             
 
-            
+            if ids is not None:
+                for i, marker_id in enumerate(ids.flatten()):
+                    if marker_id in self.corner_map:
+                        mat_idx, corner_idx = self.corner_map[marker_id]
+                        x, y = corners[i][0][corner_idx]
+                        self.pixel_matrix[mat_idx] = [float(x), float(y)]
+
             # # Step 4: Derive the Pixel Matrix and the World Matrix using Corner Markers
             # # Identify corner markers (IDs 1, 3, 5, 7)
             # # Extract their pixel coordinates and map to known world coordinates
@@ -313,7 +288,7 @@ class PoseDetector(Node):
                         cv2.putText(
                                 undistorted,
                                 f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-                                (int(center[0]) + 10, int(center[1])),
+                                (int(center[0]) + 10, int(center[1])-10),
                                 cv2.FONT_HERSHEY_SIMPLEX,
                                 0.6,
                                 (0, 0, 255),
