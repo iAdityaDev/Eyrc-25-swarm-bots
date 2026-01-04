@@ -83,7 +83,7 @@ class PoseDetector(Node):
         self.a_x_2 , self.b_x_2 = np.polyfit(self.x_est_2,self.x_real_2,1)
         self.a_y_2 , self.b_y_2 = np.polyfit(self.y_est_2,self.y_real_2,1)
 
-        selfcorner_map = {
+        self.corner_map = {
             1: (0, 0),  # TL
             3: (1, 1),  # TR
             5: (2, 3),  # BL
@@ -225,8 +225,8 @@ class PoseDetector(Node):
                     marker_world_coords[marker_id] = np.array([x_w, y_w])
 
                     cv2.circle(undistorted, (int(center[0]), int(center[1])), 5, (0,0,255), -1)
-                    cv2.putText(undistorted, f"{x_w:.1f}, {y_w:.1f}", (int(center[0])+10, int(center[1])),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+                    # cv2.putText(undistorted, f"{x_w:.1f}, {y_w:.1f}", (int(center[0])+10, int(center[1])),
+                    #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
 
 
             # # Step 7: Calculate yaw angle of each marker
