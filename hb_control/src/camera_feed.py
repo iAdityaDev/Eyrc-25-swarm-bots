@@ -181,8 +181,8 @@ class CameraTester(Node):
                 y_offset += 30
             
             # Display frame
-            cv2.namedWindow('Camera Test', cv2.WINDOW_NORMAL)
-            cv2.imshow('Camera Test', frame)
+            # cv2.namedWindow('Camera Test', cv2.WINDOW_NORMAL)
+            # cv2.imshow('Camera Test', frame)
             
             # Publish frame to ROS2 topic
             try:

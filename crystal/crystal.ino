@@ -44,7 +44,7 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 #define MAX_FWD 1900
 #define MAX_REV 1100
 
-#define MAX_VEL 80.0
+#define MAX_VEL 200.0
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
@@ -103,7 +103,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             v3 = smoothVel(m3, v3);
 
             servo1.writeMicroseconds(velocityToPWM(-v1));
-            servo2.writeMicroseconds(velocityToPWM(v2));
+            servo2.writeMicroseconds(velocityToPWM(-v2));
             servo3.writeMicroseconds(velocityToPWM(-v3));
             base_servo.write(base);
             elbow_servo.write(elbow);
@@ -159,11 +159,17 @@ void reconnect() {
 }
 
 
+// float smoothVel(float target, float &current) {
+//     if (target == 0.0) return target ;                          
+//     float step = 2.0; // limit per cycle
+//     if (target > current) current += step;
+//     else if (target < current) current -= step;
+//     return current;
+// }
 float smoothVel(float target, float &current) {
-    if (target == 0.0) return target ;                          
-    float step = 5.0; // limit per cycle
-    if (target > current) current += step;
-    else if (target < current) current -= step;
+    if (target == 0.0) return target ;
+    float alpha = 0.01;   // 0–1 (higher = faster response)
+    current += alpha * (target - current);
     return current;
 }
 

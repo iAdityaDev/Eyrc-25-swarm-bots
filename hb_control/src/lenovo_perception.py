@@ -58,7 +58,7 @@ class PoseDetector(Node):
         self.aruco_params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX
         self.aruco_params.cornerRefinementWinSize = 5
         self.aruco_params.cornerRefinementMaxIterations = 30
-        self.aruco_params.minMarkerPerimeterRate = 0.02   
+        self.aruco_params.minMarkerPerimeterRate = 0.03   
         self.aruco_params.maxMarkerPerimeterRate = 4.0
         self.aruco_params.adaptiveThreshWinSizeMin = 3
         self.aruco_params.adaptiveThreshWinSizeMax = 35

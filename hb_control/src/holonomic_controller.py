@@ -131,9 +131,9 @@ class HolonomicPIDController(Node):
 
 
         self.pid_params = {
-            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+            'x': {'kp': 4.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'y': {'kp': 4.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -141,8 +141,9 @@ class HolonomicPIDController(Node):
         self.pid_yaw = PID(**self.pid_params['theta'])
 
 
-        self.timer = self.create_timer(0.3, self.control_cb) 
+        self.timer = self.create_timer(0.5, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
+        # time.slee
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
 
@@ -220,9 +221,10 @@ class HolonomicPIDController(Node):
             # if error_y < 165:
             #     pid_y_robot = 0.0    
             if self.current_goal_wp == 0 :
-                if dist_error< 150 and abs(error_yaw) <0.13:
+                if dist_error< 150:
+                # if dist_error< 150 and abs(error_yaw) <0.13:
                     self.goal_reached = True
-                if dist_error < 145:
+                if dist_error < 15:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
             elif self.current_goal_wp == 1 :
@@ -233,7 +235,7 @@ class HolonomicPIDController(Node):
                     self.goal_reached = True                 
 
             # pose = np.array([pid_x,pid_y,pid_yaw])
-            pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
+            pose = np.array([pid_x_robot,pid_y_robot,pid_yaw])
             s_linalg = np.linalg.solve(self.A, pose)
             wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
@@ -257,7 +259,7 @@ class HolonomicPIDController(Node):
                 time.sleep(4.0)
 
                 self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
-
+                time.sleep(4.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
                 time.sleep(4.0)
 
