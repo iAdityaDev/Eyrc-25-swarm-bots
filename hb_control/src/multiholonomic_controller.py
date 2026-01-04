@@ -56,14 +56,6 @@ class PID:
         self.integral = 0.0
         self.prev_error = 0.0
 
-
-# def check_crates_assigned(self,bot_id):
-#     for i,(botid,crateid) in enumerate(self.assignments):
-#         if botid ==  bot_id:
-#             return Status.SUCCESS
-#         else : 
-#             return Status.FAILURE
-
 class CheckAsssignments(Behaviour):
     def __init__(self, name,main_node,botid):
         super(CheckAsssignments,self).__init__(name)
@@ -395,35 +387,8 @@ class drop_crate(Behaviour):
 
         return Status.SUCCESS
 
-
     def terminate(self, new_status):
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
-
-class check_other_asssign(Behaviour):
-    def __init__(self, name,main_node,botid):
-        super(check_other_asssign,self).__init__(name)
-        self.main_node = main_node
-        self.botid = botid 
-
-    def setup(self):
-        self.logger.debug(f"pickup::setup {self.name}")
-
-    def initialise(self):
-        pass
-
-    def update(self):
-
-        if self.main_node.unassigned_crates == None:
-            return Status.SUCCESS
-        
-        cid = self.main_node.unassigned_crates[0]
-        self.main_node.bot_to_crate[self.botid] = cid
-        self.main_node.unassigned_crates = None
-        return Status.RUNNING
-
-    def terminate(self, new_status):
-        self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
-
 
 class dock(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -548,7 +513,6 @@ class HolonomicPIDController(Node):
         self.all_crates = None
         self.tasks_assigned = False
         self.assigned_crates = None
-        self.unassigned_crates = None
         self.assignments = None
         self.tree = None
         self.red_crate_dropzone = ()
@@ -584,11 +548,6 @@ class HolonomicPIDController(Node):
         for botid,tree in self.trees.items():
             tree.tick()
 
-            check_node = tree.root.children[-2]
-            if check_node.status == Status.RUNNING:
-                self.reset_tree(botid)
-                return
-
             result = tree.root.status
             if result == Status.SUCCESS:
                 completed_trees.append(botid)
@@ -602,7 +561,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [0,2,4]
+        bot_ids = [0]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)
@@ -617,7 +576,6 @@ class HolonomicPIDController(Node):
         pick_crate = pickup_crate('pick',main_node=self,botid=botid)
         navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
         drope_crate = drop_crate('drop',main_node=self,botid=botid)
-        check_other = check_other_asssign('check_other_asssign',main_node=self,botid=botid)
         docks = dock('dock',main_node=self,botid=botid)
 
         root.add_children([
@@ -626,7 +584,6 @@ class HolonomicPIDController(Node):
             pick_crate,
             navigate_drop,
             drope_crate,
-            check_other,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
@@ -665,13 +622,12 @@ class HolonomicPIDController(Node):
 
     def assign_task_greedy(self):
         if self.tasks_assigned:
-            return  # prevent reassigning
+            return  
 
         if not self.all_bots or not self.all_crates:
             return
 
         self.assigned_crates = set()
-        self.unassigned_crates = []
         self.assignments = []
 
         for bot in self.all_bots:
@@ -696,7 +652,6 @@ class HolonomicPIDController(Node):
             print(f"Bot {bot_id}  Crate {crate_id}")
 
         all_crate_ids = {crate[0] for crate in self.all_crates}
-        self.unassigned_crates = list(all_crate_ids - self.assigned_crates)
         self.bot_to_crate = {bot_id: crate_id for bot_id, crate_id in self.assignments}
 
         self.tasks_assigned = True
@@ -746,39 +701,4 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

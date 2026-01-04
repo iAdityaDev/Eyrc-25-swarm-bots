@@ -166,6 +166,7 @@ void reconnect() {
 //     else if (target < current) current -= step;
 //     return current;
 // }
+
 float smoothVel(float target, float &current) {
     if (target == 0.0) return target ;
     float alpha = 0.01;   // 0–1 (higher = faster response)
