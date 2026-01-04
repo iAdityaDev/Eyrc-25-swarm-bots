@@ -14,7 +14,8 @@ from py_trees.common import Status
 from py_trees.composites import Sequence
 from py_trees import logging as log_tree
 import json
-
+import paho.mqtt.client as mqtt
+import sys
 # actio node 
 # condition node 
 # Sequence node 
@@ -150,11 +151,11 @@ class navigate_to_assigned_crate(Behaviour):
         # pose = np.array([pid_x,pid_y,pid_yaw])
         pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
         if dist_error<153 and abs(error_yaw) < 0.13:
             self.tick_count += 1 
-            wheel_velocities = [self.botid,0.0,0.0,0.0,90.0,90.0]
+            wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             if self.tick_count < self.max_ticks:
                 return py_trees.common.Status.RUNNING
@@ -181,8 +182,8 @@ class pickup_crate(Behaviour):
             self.botname = "glacio"
         self.tick_count = 0 
         self.tick_count_2 = 0 
-        self.max_ticks = 15
-        self.max_ticks_2 = 15
+        self.max_ticks = 10
+        self.max_ticks_2 = 10
         self.bool = True
 
     def setup(self):
@@ -191,44 +192,24 @@ class pickup_crate(Behaviour):
     def initialise(self):
         self.bool = True
         self.tick_count = 0 
+        self.tick_count_2 = 0 
         self.logger.debug(f"pickup::initialise {self.name}")
     
     def update(self):
         if self.main_node.bot_to_crate is None:
             return Status.RUNNING
         self.tick_count += 1
-        self.tick_count_2 += 1
 
         if self.bool:            
-            self.crateid = self.main_node.bot_to_crate[self.botid]
-            self.cratecolor = self.main_node.crate_color_dict[self.crateid]
-
-            req = AttachLink.Request()
-            req.data = json.dumps({
-                "model1_name": f"hb_{self.botname}",
-                "link1_name": f"arm_link_2",
-                "model2_name": f"crate_{self.cratecolor}_{self.crateid}",
-                "link2_name": f"box_link_{self.crateid}"
-                })
-
-            # self.get_logger().info('Attach request sent, waiting for response...')
-            future = self.main_node.attach_client.call_async(req)
+            self.mqtt_client.publish(f"esp/{self.botname}_elec", "TRUE", qos=1)
             self.bool = False
-            rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=1.0)
 
-            # if future.done() and future.result() is not None:
-            #     response = future.result()
-            #     if response.success:
-            #         self.get_logger().info(f"Attachment successful: {response.message}")
-            #     else:
-            
-            #         self.get_logger().error(f"Attachment failed: {response.message}")
-            # else:
-            #     self.get_logger().error('Attach service call timed out or did not respond.')
         if self.tick_count < self.max_ticks:
             return py_trees.common.Status.RUNNING
 
-        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,45.0,45.0])
+        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,180.0])
+
+        self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
             return py_trees.common.Status.RUNNING
         return Status.SUCCESS
@@ -314,10 +295,10 @@ class navigate_to_dropzone(Behaviour):
         # pose = np.array([pid_x,pid_y,pid_yaw])
         pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],45.0,45.0]
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
         if dist_error<160 and abs(error_yaw) < 0.63:
-            wheel_velocities = [self.botid,0,0,0,45.0,45.0]
+            wheel_velocities = [self.botid,0,0,0,180.0,180.0]
             return Status.SUCCESS  
 
         self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -358,33 +339,20 @@ class drop_crate(Behaviour):
     def update(self):
         if self.main_node.bot_to_crate is None:
             return Status.RUNNING
-        self.tick_count_2 += 1
-        print('insdie the update block ')
-
-        if self.tick_count_2 < self.max_ticks_2:
-            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,90.0,90.0])
-            print('inside the tick retrun')
-            return py_trees.common.Status.RUNNING
-
         self.tick_count += 1
-        if self.bool:
-            self.crateid = self.main_node.bot_to_crate[self.botid]
-            self.cratecolor = self.main_node.crate_color_dict[self.crateid]
-            req = DetachLink.Request()
-            req.data = json.dumps({
-                "model1_name": f"hb_{self.botname}",
-                "link1_name": f"arm_link_2",
-                "model2_name": f"crate_{self.cratecolor}_{self.crateid}",
-                "link2_name": f"box_link_{self.crateid}"
-                })
 
-            future = self.main_node.detach_client.call_async(req)
+        if self.bool:            
+            self.mqtt_client.publish(f"esp/{self.botname}_elec", "FALSE", qos=1)
             self.bool = False
-            rclpy.spin_until_future_complete(self.main_node, future, timeout_sec=1.0)
 
         if self.tick_count < self.max_ticks:
             return py_trees.common.Status.RUNNING
 
+        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,180.0])
+
+        self.tick_count_2 += 1
+        if self.tick_count_2 < self.max_ticks_2:
+            return py_trees.common.Status.RUNNING
         return Status.SUCCESS
 
     def terminate(self, new_status):
@@ -462,9 +430,10 @@ class dock(Behaviour):
         # pose = np.array([pid_x,pid_y,pid_yaw])
         pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],0.0,180.0]
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
         if dist_error<100 and abs(error_yaw) < 0.13:
+            wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             return Status.SUCCESS  
 
         self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -474,12 +443,35 @@ class dock(Behaviour):
     def terminate(self, new_status):
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
-
-
 class HolonomicPIDController(Node):
     def __init__(self):
         super().__init__('holonomic_pid_controller')  # initializing ros node
         self.get_logger().info('HolonomicPIDController is created')
+
+        broker_ip = "localhost"
+        self.mqtt_client = mqtt.Client()
+
+        def on_connect(client, userdata, flags, rc):
+            if rc == 0:
+                print("Connected to broker")
+                client.publish("esp/led", "LED_ON", qos=1)
+                print("Sent LED_ON command")
+            else:
+                print(f"Connection failed with code {rc}")
+                sys.exit(1)
+
+        def on_message(client, userdata, msg):
+            print(f"[{msg.topic}] {msg.payload.decode()}")
+
+        def on_disconnect(client, userdata, rc):
+            print("Disconnected from broker")
+
+        self.mqtt_client.on_connect = on_connect
+        self.mqtt_client.on_message = on_message
+        self.mqtt_client.on_disconnect = on_disconnect
+        self.mqtt_client.connect(broker_ip,1883,60)
+
+        self.mqtt_client.loop_start() 
 
         self.bot_pose = self.create_subscription(Poses2D, 
                                                  "/bot_pose", 
@@ -561,7 +553,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [0]
+        bot_ids = [0,2,4]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)
@@ -581,9 +573,9 @@ class HolonomicPIDController(Node):
         root.add_children([
             check_assign,
             navigate,
-            pick_crate,
+            # pick_crate,
             navigate_drop,
-            drope_crate,
+            # drope_crate,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
@@ -690,7 +682,16 @@ class HolonomicPIDController(Node):
         msg.cmds = [cmd]
 
         self.publisher.publish(msg)
-
+        data =  {
+            "id": cmd.id,
+            "m1":cmd.m1,
+            "m2":cmd.m2,
+            "m3":cmd.m3,
+            "base":cmd.base,
+            "elbow":cmd.elbow
+        }
+        print(json.dumps(data))
+        self.mqtt_client.publish("esp/bot_cmd", json.dumps(data))
 
 def main(args=None):
     rclpy.init(args=args)
