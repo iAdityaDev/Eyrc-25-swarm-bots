@@ -48,7 +48,7 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
-const char* broker_ip = "10.120.17.247";
+const char* broker_ip = "10.120.17.233";
 const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"
@@ -98,10 +98,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             // Serial.println(base);
             // Serial.println(elbow);
             
-            v1 = Step_vel(m1, v1);
-            v2 = Step_vel(m2, v2);
-            v3 = Step_vel(m3, v3);
-
+            // v1 = Step_vel(m1, v1);
+            // v2 = Step_vel(m2, v2);
+            // v3 = Step_vel(m3, v3);
+            v1 = smoothVel(m1, v1);
+            v2 = smoothVel(m2, v2);
+            v3 = smoothVel(m3, v3);
+            // servo1.writeMicroseconds(velocityToPWM(-v1));u
+            // servo2.writeMicroseconds(velocityToPWM(-v2));
+            // servo3.writeMicroseconds(velocityToPWM(-v3));
             servo1.writeMicroseconds(velocityToPWM(-v1));
             servo2.writeMicroseconds(velocityToPWM(-v2));
             servo3.writeMicroseconds(velocityToPWM(-v3));
@@ -159,43 +164,80 @@ void reconnect() {
 }
 
 
-float smoothVel(float target, float &current) {
-    if (target == 0.0) return target ;                          
-    float step = 10.0; // limit per cycle
-    if (target > current) current += step;
-    else if (target < current) current -= step;
-    return current;
-}
+// float smoothVel(float target, float &current) {
+//     if (target == 0.0) return target ;                          
+//     float step = 10.0; // limit per cycle
+//     if (target > current) current += step;
+//     else if (target < current) current -= step;
+//     return current;
+// }
 
 
 float Step_vel(float target, float &current) {
-    if (target == 0.0) return target ;                          
-    float soeed_20 = 20.0; // limit per cycle
-    if (current>=0.0 && current<=20.0 && target <= 20.0 ){
+    if (target == 0.0) return target ;      
+                        
+    // if (current>=0.0 && current<=20.0 && target <= 20.0 ){
+    //     return target;
+
+    // }
+    // if (current>=0.0 && current<20.0 && target >= 20.0 ){
+    //     return 20.0;
+
+    // }
+    // else if(current >= 20.0 && current <= 100.0 && target >= 20.0 && target <= 100.0){
+    //     return target;
+    // }
+    // else if(current >= 20.0 && current<100.0 && target>=100.0){
+    //      return 100.0;
+    // }
+
+    // else if(current >= 100.0 ){
+    //      return target;
+    // }
+    // else if(current >target ){
+    //      return target;
+    // }
+
+
+    else if (current <= 0.0 && current >= -20.0 && target >= -20.0) {
         return target;
-
     }
-    if (current<20.0 && current>=0.0 && target >= 20.0 ){
-        return 20.0;
-
+    else if (current <= 0.0 && current > -20.0 && target <= -20.0) {
+        return -20.0;
     }
-    else if(current >= 20.0 && current <= 100.0 && target >= 20.0 && target <= 100.0){
+    else if (current <= -20.0 && current >= -100.0 && target <= -20.0 && target >= -100.0) {
         return target;
     }
-    else if(current >= 20.0 && current<100.0 && target>=100.0){
-         return 100.0;
+    else if (current <= -20.0 && current > -100.0 && target <= -100.0) {
+        return -100.0;
     }
 
-     else if(current >= 100.0 ){
-         return target;
+    // ---------- -150 ----------
+    else if (current <= -100.0 && current >= -150.0 && target >= -150.0) {
+        return target;
     }
-    else if(current >target ){
-         return target;
+    else if (current <= -100.0 && current > -150.0 && target <= -150.0) {
+        return -150.0;
+    }
+
+    // ---------- -200 ----------
+    else if (current <= -150.0 && current >= -200.0 && target <= -150.0 && target >= -200.0) {
+        return target;
+    }
+    else if (current <= -150.0 && current > -200.0 && target <= -200.0) {
+        return -200.0;
+    }
+    else if (current <= -200.0) {
+        return target;
+    }
+
+    // ---------- FALLBACK ----------
+    else if (current < target) {
+        return target;
     }
     
+
 }
-
-
 
 // float Step_vel(float target, float current)
 // {
@@ -230,15 +272,33 @@ float Step_vel(float target, float &current) {
 //     return target;
 // }
 
-// float smoothVel(float target, float &current) {
-//     if (target == 0.0) return target ;
-//     float alpha = 0.01;   // 0–1 (higher = faster response)
-//     current += alpha * (target - current);
-//     return current;
-// }
+float smoothVel(float target, float &current) {
+    target = constrain(target, -MAX_VEL, MAX_VEL);
+    current = constrain(current, -MAX_VEL, MAX_VEL);
+    if (target == 0.0) return target ;
+    if ((target*current)<0.0) return 0.0 ;
+    float alpha = 0.1; 
+    if (abs(current-target)<=10){
+        float alpha = 1.0;
+    }
+    if (abs(current-target)<=50){
+        float alpha = 0.5;
+    }
+    if (abs(current-target)<=100){
+        float alpha = 0.25;
+    }
+    if (abs(current-target)<=150){
+        float alpha = 0.2;
+    }
+    if (abs(current-target)<=200){
+        float alpha = 0.125;
+    }
+    current += alpha * (target - current);
+    return current;
+}
 
 int velocityToPWM(float vel) {
-    vel = constrain(vel, -MAX_VEL, MAX_VEL);
+
 
     if (vel == 0) return NEUTRAL;
 

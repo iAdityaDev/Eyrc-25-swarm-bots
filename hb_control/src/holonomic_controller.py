@@ -129,11 +129,19 @@ class HolonomicPIDController(Node):
         # ]
         # print(type(self.goals),self.goals[3])
 
+#######use this for the hardware bot 
+        # self.pid_params = {
+        #     'x': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+        #     'y': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+        #     'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
+        # }
 
+#################v
+#######use this for the sim bot 
         self.pid_params = {
-            'x': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'y': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
+            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -141,7 +149,7 @@ class HolonomicPIDController(Node):
         self.pid_yaw = PID(**self.pid_params['theta'])
 
 
-        self.timer = self.create_timer(0.5, self.control_cb) 
+        self.timer = self.create_timer(0.1, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
         # time.slee
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
