@@ -131,8 +131,8 @@ class HolonomicPIDController(Node):
 
 
         self.pid_params = {
-            'x': {'kp': 4.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'y': {'kp': 4.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'x': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'y': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
             'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
         }
 

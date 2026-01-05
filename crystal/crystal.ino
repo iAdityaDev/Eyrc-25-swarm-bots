@@ -27,8 +27,8 @@ Servo base_servo;
 Servo elbow_servo; 
 
 #define servo1_pin 27
-#define servo2_pin 26
-#define servo3_pin 25
+#define servo2_pin 25
+#define servo3_pin 26
 #define base_servo_pin 33
 #define elbow_servo_pin 32
 
@@ -48,7 +48,7 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
-const char* broker_ip = "10.120.17.233";
+const char* broker_ip = "10.120.17.247";
 const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"
@@ -98,9 +98,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             // Serial.println(base);
             // Serial.println(elbow);
             
-            v1 = smoothVel(m1, v1);
-            v2 = smoothVel(m2, v2);
-            v3 = smoothVel(m3, v3);
+            v1 = Step_vel(m1, v1);
+            v2 = Step_vel(m2, v2);
+            v3 = Step_vel(m3, v3);
 
             servo1.writeMicroseconds(velocityToPWM(-v1));
             servo2.writeMicroseconds(velocityToPWM(-v2));
@@ -159,20 +159,83 @@ void reconnect() {
 }
 
 
-// float smoothVel(float target, float &current) {
-//     if (target == 0.0) return target ;                          
-//     float step = 2.0; // limit per cycle
-//     if (target > current) current += step;
-//     else if (target < current) current -= step;
-//     return current;
-// }
-
 float smoothVel(float target, float &current) {
-    if (target == 0.0) return target ;
-    float alpha = 0.01;   // 0–1 (higher = faster response)
-    current += alpha * (target - current);
+    if (target == 0.0) return target ;                          
+    float step = 10.0; // limit per cycle
+    if (target > current) current += step;
+    else if (target < current) current -= step;
     return current;
 }
+
+
+float Step_vel(float target, float &current) {
+    if (target == 0.0) return target ;                          
+    float soeed_20 = 20.0; // limit per cycle
+    if (current>=0.0 && current<=20.0 && target <= 20.0 ){
+        return target;
+
+    }
+    if (current<20.0 && current>=0.0 && target >= 20.0 ){
+        return 20.0;
+
+    }
+    else if(current >= 20.0 && current <= 100.0 && target >= 20.0 && target <= 100.0){
+        return target;
+    }
+    else if(current >= 20.0 && current<100.0 && target>=100.0){
+         return 100.0;
+    }
+
+     else if(current >= 100.0 ){
+         return target;
+    }
+    else if(current >target ){
+         return target;
+    }
+    
+}
+
+
+
+// float Step_vel(float target, float current)
+// {
+//     // If already at target
+//     if (current == target)
+//         return current;
+
+//     // If direction is changing, go to zero first
+//     if ((current > 0 && target < 0) || (current < 0 && target > 0))
+//     {
+//         if (current != 0.0f)
+//             return 0.0f;
+//     }
+
+//     // Determine direction
+//     float dir = (target > current) ? 1.0f : -1.0f;
+
+//     float abs_current = fabs(current);
+//     float abs_target  = fabs(target);
+    
+//     // Step ladder
+//     if (abs_current < 20.0f)
+//         return dir * 20.0f;
+
+//     else if (abs_current < 100.0f)
+//         return dir * 100.0f;
+
+//     else if (abs_current < 200.0f)
+//         return dir * 200.0f;
+
+//     // Clamp to target if beyond
+//     return target;
+// }
+
+// float smoothVel(float target, float &current) {
+//     if (target == 0.0) return target ;
+//     float alpha = 0.01;   // 0–1 (higher = faster response)
+//     current += alpha * (target - current);
+//     return current;
+// }
 
 int velocityToPWM(float vel) {
     vel = constrain(vel, -MAX_VEL, MAX_VEL);
