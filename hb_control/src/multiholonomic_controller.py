@@ -201,7 +201,7 @@ class pickup_crate(Behaviour):
         self.tick_count += 1
 
         if self.bool:            
-            self.mqtt_client.publish(f"esp/{self.botname}_elec", "TRUE", qos=1)
+            self.main_node.mqtt_client.publish(f"esp/{self.botname}_elec", "TRUE", qos=1)
             self.bool = False
 
         if self.tick_count < self.max_ticks:
@@ -342,7 +342,7 @@ class drop_crate(Behaviour):
         self.tick_count += 1
 
         if self.bool:            
-            self.mqtt_client.publish(f"esp/{self.botname}_elec", "FALSE", qos=1)
+            self.main_node.mqtt_client.publish(f"esp/{self.botname}_elec", "FALSE", qos=1)
             self.bool = False
 
         if self.tick_count < self.max_ticks:
@@ -553,7 +553,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [0,2,4]
+        bot_ids = [0]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)
@@ -573,9 +573,9 @@ class HolonomicPIDController(Node):
         root.add_children([
             check_assign,
             navigate,
-            # pick_crate,
+            pick_crate,
             navigate_drop,
-            # drope_crate,
+            drope_crate,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
