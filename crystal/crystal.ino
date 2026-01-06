@@ -26,9 +26,9 @@ Servo servo3;
 Servo base_servo;
 Servo elbow_servo; 
 
-#define servo1_pin 27
-#define servo2_pin 25
-#define servo3_pin 26
+#define servo1_pin 25
+#define servo2_pin 26
+#define servo3_pin 27
 #define base_servo_pin 33
 #define elbow_servo_pin 32
 
@@ -48,7 +48,7 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
-const char* broker_ip = "10.120.17.233";
+const char* broker_ip = "10.120.17.247";
 const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"
@@ -101,15 +101,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             // v1 = Step_vel(m1, v1);
             // v2 = Step_vel(m2, v2);
             // v3 = Step_vel(m3, v3);
-            v1 = smoothVel(m1, v1);
-            v2 = smoothVel(m2, v2);
-            v3 = smoothVel(m3, v3);
+            // v1 = smoothVel(m1, v1);
+            // v2 = smoothVel(m2, v2);
+            // v3 = smoothVel(m3, v3);
             // servo1.writeMicroseconds(velocityToPWM(-v1));u
             // servo2.writeMicroseconds(velocityToPWM(-v2));
             // servo3.writeMicroseconds(velocityToPWM(-v3));
-            servo1.writeMicroseconds(velocityToPWM(-v1));
-            servo2.writeMicroseconds(velocityToPWM(-v2));
-            servo3.writeMicroseconds(velocityToPWM(-v3));
+            servo1.writeMicroseconds(velocityToPWM(m1));
+            servo2.writeMicroseconds(velocityToPWM(m2));
+            servo3.writeMicroseconds(velocityToPWM(m3));
             base_servo.write(base);
             elbow_servo.write(elbow);
         }
@@ -272,30 +272,67 @@ float Step_vel(float target, float &current) {
 //     return target;
 // }
 
+// float smoothVel(float target, float &current) {
+//     target = constrain(target, -MAX_VEL, MAX_VEL);
+//     current = constrain(current, -MAX_VEL, MAX_VEL);
+//     if (target == 0.0) return target ;
+//     if ((targetcurrent)<0.0) return 0.0 ;
+//     float alpha = 0.1; 
+//     if (abs(current-target)<=10){
+//         float alpha = 1.0;
+//     }
+//     if ((abs(current-target))>10 && (abs(current-target))<=50){
+//         float alpha = 0.5;
+//     }
+//     if ((abs(current-target))>100 && (abs(current-target))<=100){
+//         float alpha = 0.25;
+//     }
+//     if ((abs(current-target))>100) && (abs(current-target))<=150){
+//         float alpha = 0.2;
+//     }
+//     if ((abs(current-target))>150 && (abs(current-target))<=200){
+//         float alpha = 0.125;
+//     }
+//     current += alpha (target - current);
+//     return current;
+// }
+
+
 float smoothVel(float target, float &current) {
-    target = constrain(target, -MAX_VEL, MAX_VEL);
-    current = constrain(current, -MAX_VEL, MAX_VEL);
-    if (target == 0.0) return target ;
-    if ((target*current)<0.0) return 0.0 ;
-    float alpha = 0.1; 
-    if (abs(current-target)<=10){
-        float alpha = 1.0;
+    target  = constrain((target/5),  -MAX_VEL, MAX_VEL);
+    current = constrain((current/5), -MAX_VEL, MAX_VEL);
+
+    // If target is zero, smoothly bring current to zero
+    if (target == 0.0) {
+        
+        return target;
     }
-    if (abs(current-target)<=50){
-        float alpha = 0.5;
+
+    // If direction changes, stop first
+    if ((target * current) < 0.0) {
+        current = 0.0;
+        return current;
     }
-    if (abs(current-target)<=100){
-        float alpha = 0.25;
+
+    float error = abs(target - current);
+    float alpha = 0.1;
+
+    if (error <= 10) {
+        alpha = 1.0;
+    } else if (error <= 50) {
+        alpha = 0.5;
+    } else if (error <= 100) {
+        alpha = 0.25;
+    } else if (error <= 150) {
+        alpha = 0.2;
+    } else if (error <= 200) {
+        alpha = 0.125;
     }
-    if (abs(current-target)<=150){
-        float alpha = 0.2;
-    }
-    if (abs(current-target)<=200){
-        float alpha = 0.125;
-    }
+
     current += alpha * (target - current);
     return current;
 }
+
 
 int velocityToPWM(float vel) {
 

@@ -130,19 +130,19 @@ class HolonomicPIDController(Node):
         # print(type(self.goals),self.goals[3])
 
 #######use this for the hardware bot 
-        # self.pid_params = {
-        #     'x': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-        #     'y': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-        #     'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
-        # }
+        self.pid_params = {
+            'x': {'kp': 2.5, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'y': {'kp': 0.01, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
+        }
 
 #################v
 #######use this for the sim bot 
-        self.pid_params = {
-            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 2.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
-        }
+        # self.pid_params = {
+        #     'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+        #     'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+        #     'theta': {'kp': 2.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+        # }
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
