@@ -141,7 +141,7 @@ class HolonomicPIDController(Node):
         self.pid_params = {
             'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
             'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+            'theta': {'kp': 2.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -173,7 +173,7 @@ class HolonomicPIDController(Node):
         
         if self.goals == None:
             self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw),
-                          (1280.2,1219.2,0.0 ),
+                          (1210.2,1169.2,0.0 ),
                           (1219.2,130.0,0.0)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
         # print(self.goals)    
