@@ -131,27 +131,27 @@ class HolonomicPIDController(Node):
         # ]
         # print(type(self.goals),self.goals[3])
 
-#######use this for the hardware bot 
-        # self.pid_params = {
-        #     'x': {'kp': 2.5, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-        #     'y': {'kp': 0.01, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-        #     'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
-        # }
-
-#################v
 #######use this for the sim bot 
         self.pid_params = {
-            'x': {'kp':3.25, 'ki': 0.00, 'kd': 0.1, 'max_out': self.max_vel},
-            'y': {'kp': 3.25, 'ki': 0.00, 'kd': 0.1, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 3.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'y': {'kp': 3.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+            'theta': {'kp': 3.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
         }
+
+#################v
+#######use this for the hard bot 
+        # self.pid_params = {
+        #     'x': {'kp':0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+        #     'y': {'kp': 0.00, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+        #     'theta': {'kp': 1.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+        # }
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
         self.pid_yaw = PID(**self.pid_params['theta'])
 
 
-        self.timer = self.create_timer(0.1, self.control_cb) 
+        self.timer = self.create_timer(0.9, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
@@ -174,7 +174,7 @@ class HolonomicPIDController(Node):
         
         if self.goals == None:
             self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw),
-                          (1210.2,1169.2,0.0 ),
+                          (1253,1220.2,0.0 ),
                           (1219.2,210.0,0.0)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
         # print(self.goals)    
@@ -197,7 +197,12 @@ class HolonomicPIDController(Node):
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
             target_yaw = math.atan2(error_y,error_x)
-            error_yaw = target_yaw - self.current_pose_bot_yaw - math.pi/2
+            error_yaw = target_yaw - self.current_pose_bot_yaw
+            # if self.current_goal_wp == 1:
+            #     error_yaw = 0.0 
+            #     error_y = -error_y
+
+            # error_yaw = target_yaw - self.current_pose_bot_yaw
             # error_yaw = self.target_yaw-self.current_pose_bot_yaw
             # correction = -1.03 * self.current_pose_crate_yaw + 0.8
             # error_yaw += correction
@@ -230,6 +235,10 @@ class HolonomicPIDController(Node):
             #     pid_x_robot = 0.0 
             # if error_y < 165:
             #     pid_y_robot = 0.0    
+            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+            s_linalg = np.linalg.solve(self.A, pose)
+            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+
             if self.current_goal_wp == 0 :
                 if dist_error< 190:
                 # if dist_error< 150 and abs(error_yaw) <0.13:
@@ -248,9 +257,7 @@ class HolonomicPIDController(Node):
                     self.goal_reached = True                 
 
             # pose = np.array([pid_x,pid_y,pid_yaw])
-            pose = np.array([pid_x_robot,pid_y_robot,pid_yaw])
-            s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+
 
             #  1 blue 
             # 2 red 
