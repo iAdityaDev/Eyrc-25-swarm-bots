@@ -13,10 +13,6 @@ import paho.mqtt.client as mqtt
 import sys
 import json
 
-# ros2 service call /attach_link linkattacher_msgs/srv/AttachLink "{
-#   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_17\"}'
-# }"
-
 class PID:
     def __init__(self, kp, ki, kd, max_out=1.0):
         self.kp = kp
@@ -36,6 +32,7 @@ class PID:
         # self.output = max(min(self.output, self.max_out), -self.max_out)
 
         return self.output
+    
     def print(self):
         print(self.output)
     
@@ -106,8 +103,13 @@ class HolonomicPIDController(Node):
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
             [np.sin(self.alpha1 + np.pi/2), np.sin(self.alpha2 + np.pi/2), np.sin(self.alpha3 + np.pi/2)],
-            [0.185,0.185,0.185]
+            [0.08,0.08,0.08]
         ])
+        # self.A = np.array([
+        #     [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
+        #     [np.sin(self.alpha1 + np.pi/2), np.sin(self.alpha2 + np.pi/2), np.sin(self.alpha3 + np.pi/2)],
+        #     [0.185,0.185,0.185]
+        # ])
         # self.A = np.array([
         #     [np.cos(self.alpha1), np.cos(self.alpha2), np.cos(self.alpha3)],
         #     [np.sin(self.alpha1), np.sin(self.alpha2), np.sin(self.alpha3)],
@@ -130,19 +132,19 @@ class HolonomicPIDController(Node):
         # print(type(self.goals),self.goals[3])
 
 #######use this for the hardware bot 
-        self.pid_params = {
-            'x': {'kp': 2.5, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'y': {'kp': 0.01, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
-        }
+        # self.pid_params = {
+        #     'x': {'kp': 2.5, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+        #     'y': {'kp': 0.01, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+        #     'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0 , 'max_out': self.max_vel * 2}
+        # }
 
 #################v
 #######use this for the sim bot 
-        # self.pid_params = {
-        #     'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-        #     'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-        #     'theta': {'kp': 2.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
-        # }
+        self.pid_params = {
+            'x': {'kp':3.25, 'ki': 0.00, 'kd': 0.1, 'max_out': self.max_vel},
+            'y': {'kp': 3.25, 'ki': 0.00, 'kd': 0.1, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+        }
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
@@ -151,7 +153,6 @@ class HolonomicPIDController(Node):
 
         self.timer = self.create_timer(0.1, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
-        # time.slee
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
 
@@ -174,7 +175,7 @@ class HolonomicPIDController(Node):
         if self.goals == None:
             self.goals = [(self.current_pose_crate_x,self.current_pose_crate_y,self.current_pose_crate_yaw),
                           (1210.2,1169.2,0.0 ),
-                          (1219.2,130.0,0.0)]
+                          (1219.2,210.0,0.0)]
             self.target_x,self.target_y,self.target_yaw = self.goals[0]
         # print(self.goals)    
 
@@ -208,7 +209,8 @@ class HolonomicPIDController(Node):
                 error_yaw += 2 * math.pi
             # print(error_x,error_y,error_yaw)
             # print(error_x,error_y,error_yaw)
-            print(dist_error)
+            # print(dist_error)
+            print(error_x,error_y,error_yaw)
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
             pid_yaw = self.pid_yaw.compute(error_yaw,dt)
@@ -229,15 +231,18 @@ class HolonomicPIDController(Node):
             # if error_y < 165:
             #     pid_y_robot = 0.0    
             if self.current_goal_wp == 0 :
-                if dist_error< 150:
+                if dist_error< 190:
                 # if dist_error< 150 and abs(error_yaw) <0.13:
                     self.goal_reached = True
-                if dist_error < 15:
+                if dist_error < 150:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
             elif self.current_goal_wp == 1 :
                 if dist_error< 150 :
                     self.goal_reached = True
+                if dist_error < 150:
+                    pid_x_robot = 0.0 
+                    pid_y_robot = 0.0
             else :
                 if abs(error_x) < 2.0 and abs(error_y) < 2.0 and abs(error_yaw) < 0.1:
                     self.goal_reached = True                 
@@ -275,9 +280,9 @@ class HolonomicPIDController(Node):
             self.goal_reached = False
             self.current_goal_wp += 1
             
-            print(self.current_goal_wp)
+            # print(self.current_goal_wp)
             if self.current_goal_wp ==3:
-                self.get_logger().info('all th points reached')
+                self.get_logger().info('all the points reached')
                 wheel_velocities = [0.0, 0.0, 0.0,180.0,180.0]
             if self.current_goal_wp < len(self.goals):
                 self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
@@ -309,7 +314,7 @@ class HolonomicPIDController(Node):
             "base":cmd.base,
             "elbow":cmd.elbow
         }
-        print(json.dumps(data))
+        # print(json.dumps(data))
         self.mqtt_client.publish("esp/bot_cmd", json.dumps(data))
 
 

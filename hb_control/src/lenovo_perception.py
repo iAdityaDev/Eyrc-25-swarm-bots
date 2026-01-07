@@ -264,6 +264,7 @@ class PoseDetector(Node):
                             (0, 0, 255),
                             2
                         )
+                        
                     elif marker_id == 2:
                         cv2.putText(
                             undistorted,
@@ -294,6 +295,8 @@ class PoseDetector(Node):
                                 (0, 0, 255),
                                 2
                             )
+                        print('cratee')
+                        print(x_w,y_w,yaw)
                         
                     if marker_id==0 or marker_id == 2 or marker_id == 4 :
                         bot_pose={

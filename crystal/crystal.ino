@@ -26,9 +26,9 @@ Servo servo3;
 Servo base_servo;
 Servo elbow_servo; 
 
-#define servo1_pin 25
-#define servo2_pin 26
-#define servo3_pin 27
+#define servo1_pin 27
+#define servo2_pin 25
+#define servo3_pin 26
 #define base_servo_pin 33
 #define elbow_servo_pin 32
 
@@ -48,7 +48,7 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
-const char* broker_ip = "10.120.17.247";
+const char* broker_ip = "10.120.17.233";
 const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"
@@ -104,12 +104,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
             // v1 = smoothVel(m1, v1);
             // v2 = smoothVel(m2, v2);
             // v3 = smoothVel(m3, v3);
-            // servo1.writeMicroseconds(velocityToPWM(-v1));u
+            // servo1.writeMicroseconds(velocityToPWM(-v1));    
             // servo2.writeMicroseconds(velocityToPWM(-v2));
             // servo3.writeMicroseconds(velocityToPWM(-v3));
-            servo1.writeMicroseconds(velocityToPWM(m1));
-            servo2.writeMicroseconds(velocityToPWM(m2));
-            servo3.writeMicroseconds(velocityToPWM(m3));
+            servo1.writeMicroseconds(velocityToPWM(-m1));
+            servo2.writeMicroseconds(velocityToPWM(-m2));
+            servo3.writeMicroseconds(velocityToPWM(-m3));
             base_servo.write(base);
             elbow_servo.write(elbow);
         }
@@ -163,6 +163,22 @@ void reconnect() {
     }
 }
 
+int velocityToPWM(float vel) {
+
+    if (vel == 0) return NEUTRAL;
+
+    int pulse;
+
+    if (vel > 0) {
+        pulse = STOP_MAX +
+                (vel / MAX_VEL) * (MAX_FWD - STOP_MAX);
+    } else {
+        pulse = STOP_MIN +
+                (vel / MAX_VEL) * (STOP_MIN - MAX_REV);
+    }
+    return constrain(pulse, MAX_REV, MAX_FWD);
+}
+
 
 // float smoothVel(float target, float &current) {
 //     if (target == 0.0) return target ;                          
@@ -173,71 +189,71 @@ void reconnect() {
 // }
 
 
-float Step_vel(float target, float &current) {
-    if (target == 0.0) return target ;      
+// float Step_vel(float target, float &current) {
+//     if (target == 0.0) return target ;      
                         
-    // if (current>=0.0 && current<=20.0 && target <= 20.0 ){
-    //     return target;
+//     // if (current>=0.0 && current<=20.0 && target <= 20.0 ){
+//     //     return target;
 
-    // }
-    // if (current>=0.0 && current<20.0 && target >= 20.0 ){
-    //     return 20.0;
+//     // }
+//     // if (current>=0.0 && current<20.0 && target >= 20.0 ){
+//     //     return 20.0;
 
-    // }
-    // else if(current >= 20.0 && current <= 100.0 && target >= 20.0 && target <= 100.0){
-    //     return target;
-    // }
-    // else if(current >= 20.0 && current<100.0 && target>=100.0){
-    //      return 100.0;
-    // }
+//     // }
+//     // else if(current >= 20.0 && current <= 100.0 && target >= 20.0 && target <= 100.0){
+//     //     return target;
+//     // }
+//     // else if(current >= 20.0 && current<100.0 && target>=100.0){
+//     //      return 100.0;
+//     // }
 
-    // else if(current >= 100.0 ){
-    //      return target;
-    // }
-    // else if(current >target ){
-    //      return target;
-    // }
+//     // else if(current >= 100.0 ){
+//     //      return target;
+//     // }
+//     // else if(current >target ){
+//     //      return target;
+//     // }
 
 
-    else if (current <= 0.0 && current >= -20.0 && target >= -20.0) {
-        return target;
-    }
-    else if (current <= 0.0 && current > -20.0 && target <= -20.0) {
-        return -20.0;
-    }
-    else if (current <= -20.0 && current >= -100.0 && target <= -20.0 && target >= -100.0) {
-        return target;
-    }
-    else if (current <= -20.0 && current > -100.0 && target <= -100.0) {
-        return -100.0;
-    }
+//     else if (current <= 0.0 && current >= -20.0 && target >= -20.0) {
+//         return target;
+//     }
+//     else if (current <= 0.0 && current > -20.0 && target <= -20.0) {
+//         return -20.0;
+//     }
+//     else if (current <= -20.0 && current >= -100.0 && target <= -20.0 && target >= -100.0) {
+//         return target;
+//     }
+//     else if (current <= -20.0 && current > -100.0 && target <= -100.0) {
+//         return -100.0;
+//     }
 
-    // ---------- -150 ----------
-    else if (current <= -100.0 && current >= -150.0 && target >= -150.0) {
-        return target;
-    }
-    else if (current <= -100.0 && current > -150.0 && target <= -150.0) {
-        return -150.0;
-    }
+//     // ---------- -150 ----------
+//     else if (current <= -100.0 && current >= -150.0 && target >= -150.0) {
+//         return target;
+//     }
+//     else if (current <= -100.0 && current > -150.0 && target <= -150.0) {
+//         return -150.0;
+//     }
 
-    // ---------- -200 ----------
-    else if (current <= -150.0 && current >= -200.0 && target <= -150.0 && target >= -200.0) {
-        return target;
-    }
-    else if (current <= -150.0 && current > -200.0 && target <= -200.0) {
-        return -200.0;
-    }
-    else if (current <= -200.0) {
-        return target;
-    }
+//     // ---------- -200 ----------
+//     else if (current <= -150.0 && current >= -200.0 && target <= -150.0 && target >= -200.0) {
+//         return target;
+//     }
+//     else if (current <= -150.0 && current > -200.0 && target <= -200.0) {
+//         return -200.0;
+//     }
+//     else if (current <= -200.0) {
+//         return target;
+//     }
 
-    // ---------- FALLBACK ----------
-    else if (current < target) {
-        return target;
-    }
+//     // ---------- FALLBACK ----------
+//     else if (current < target) {
+//         return target;
+//     }
     
 
-}
+// }
 
 // float Step_vel(float target, float current)
 // {
@@ -298,58 +314,40 @@ float Step_vel(float target, float &current) {
 // }
 
 
-float smoothVel(float target, float &current) {
-    target  = constrain((target/5),  -MAX_VEL, MAX_VEL);
-    current = constrain((current/5), -MAX_VEL, MAX_VEL);
+// float smoothVel(float target, float &current) {
+//     target  = constrain((target/5),  -MAX_VEL, MAX_VEL);
+//     current = constrain((current/5), -MAX_VEL, MAX_VEL);
 
-    // If target is zero, smoothly bring current to zero
-    if (target == 0.0) {
+//     // If target is zero, smoothly bring current to zero
+//     if (target == 0.0) {
         
-        return target;
-    }
+//         return target;
+//     }
 
-    // If direction changes, stop first
-    if ((target * current) < 0.0) {
-        current = 0.0;
-        return current;
-    }
+//     // If direction changes, stop first
+//     if ((target * current) < 0.0) {
+//         current = 0.0;
+//         return current;
+//     }
 
-    float error = abs(target - current);
-    float alpha = 0.1;
+//     float error = abs(target - current);
+//     float alpha = 0.1;
 
-    if (error <= 10) {
-        alpha = 1.0;
-    } else if (error <= 50) {
-        alpha = 0.5;
-    } else if (error <= 100) {
-        alpha = 0.25;
-    } else if (error <= 150) {
-        alpha = 0.2;
-    } else if (error <= 200) {
-        alpha = 0.125;
-    }
+//     if (error <= 10) {
+//         alpha = 1.0;
+//     } else if (error <= 50) {
+//         alpha = 0.5;
+//     } else if (error <= 100) {
+//         alpha = 0.25;
+//     } else if (error <= 150) {
+//         alpha = 0.2;
+//     } else if (error <= 200) {
+//         alpha = 0.125;
+//     }
 
-    current += alpha * (target - current);
-    return current;
-}
-
-
-int velocityToPWM(float vel) {
-
-
-    if (vel == 0) return NEUTRAL;
-
-    int pulse;
-
-    if (vel > 0) {
-        pulse = STOP_MAX +
-                (vel / MAX_VEL) * (MAX_FWD - STOP_MAX);
-    } else {
-        pulse = STOP_MIN +
-                (vel / MAX_VEL) * (STOP_MIN - MAX_REV);
-    }
-    return constrain(pulse, MAX_REV, MAX_FWD);
-}
+//     current += alpha * (target - current);
+//     return current;
+// }
 
 void setup() {
     Serial.begin(115200);
