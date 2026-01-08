@@ -53,6 +53,7 @@ class HolonomicPIDController(Node):
             if rc == 0:
                 print("Connected to broker")
                 client.publish("esp/led", "LED_ON", qos=1)
+                self.mqtt_client.subscribe("esp/crystal_ir  ")
                 print("Sent LED_ON command")
             else:
                 print(f"Connection failed with code {rc}")
@@ -60,6 +61,12 @@ class HolonomicPIDController(Node):
 
         def on_message(client, userdata, msg):
             print(f"[{msg.topic}] {msg.payload.decode()}")
+            self.ir_state = int(msg.payload.decode())
+
+            if self.ir_state == 0:
+                print("Object Detected")
+            else:
+                print("No Object")
 
         def on_disconnect(client, userdata, rc):
             print("Disconnected from broker")
@@ -238,30 +245,32 @@ class HolonomicPIDController(Node):
             #     pid_x_robot = 0.0 
             # if error_y < 165:
             #     pid_y_robot = 0.0    
-            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
-            s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+
 
             if self.current_goal_wp == 0 :
+                if self.ir_state == 0:
+                    self.goal_reached = True
                 if dist_error< 190 and (abs(3.14-error_yaw) < 0.2 and abs(3.14-error_yaw) > 0.15) :
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
                     pid_yaw = 0.0
                 # if dist_error< 150 and abs(error_yaw) <0.13:
                     self.goal_reached = True
-                if dist_error < 190:
+                elif dist_error < 190:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
+
             elif self.current_goal_wp == 1 :
                 if dist_error< 190 :
                     self.goal_reached = True
                 if dist_error < 190:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
-            else :
+            elif self.current_goal_wp == 2 :
                 if abs(error_x) < 22.0 and abs(error_y) < 22.0:
                     self.goal_reached = True  
-                    exit()               
+                    pid_x_robot = 0.0 
+                    pid_y_robot = 0.0
 
             # pose = np.array([pid_x,pid_y,pid_yaw])
 
@@ -269,29 +278,31 @@ class HolonomicPIDController(Node):
             #  1 blue 
             # 2 red 
             # 3 green
-
+            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+            s_linalg = np.linalg.solve(self.A, pose)
+            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
             self.publish_wheel_velocities(wheel_velocities)
 
         if self.goal_reached:
 
             if self.current_goal_wp == 0:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
-                time.sleep(4.0)
+                time.sleep(2.0)
                 
 
                 self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
                 time.sleep(4.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
-                time.sleep(4.0)
+                time.sleep(1.0)
 
             if self.current_goal_wp == 1:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
-                time.sleep(4.0)
+                time.sleep(2.0)
 
                 self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
                 time.sleep(4.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
-                time.sleep(4.0)
+                time.sleep(2.0)
 
             self.get_logger().info('changign to next goal')
             
@@ -299,7 +310,8 @@ class HolonomicPIDController(Node):
                 self.get_logger().info('all the points reached')
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
                 print(self.current_goal_wp)
-                exit()
+                self.timer.cancel()
+
             self.goal_reached = False
             self.current_goal_wp += 1
             if self.current_goal_wp < len(self.goals):

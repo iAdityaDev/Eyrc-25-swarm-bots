@@ -4,18 +4,22 @@
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 #include <Arduino.h>
+#define IR_PIN 13
 
 #define BOT_ID 4  // 0=crystal pink, 2=frostbite purple, 4=glacio red
 
 #if BOT_ID == 0
   #define CLIENT_ID "ESPcrystal"
   #define ELEC_TOPIC "esp/crystal_elec"
+  #define IR_TOPIC "esp/crystal_ir"
 #elif BOT_ID == 2
   #define CLIENT_ID "ESPfrostbite"
   #define ELEC_TOPIC "esp/frostbite_elec"
+  #define IR_TOPIC "esp/frostbite_ir"
 #elif BOT_ID == 4
   #define CLIENT_ID "ESPglacio"
   #define ELEC_TOPIC "esp/glacio_elec"
+  #define IR_TOPIC "esp/glacio_ir"
 #else
   #error "Invalid BOT_ID"
 #endif
@@ -349,6 +353,13 @@ int velocityToPWM(float vel) {
 //     return current;
 // }
 
+void publishIRdata(int state) {
+    String payload = String(state);
+    mqttClient.publish(IR_TOPIC, payload.c_str());
+    Serial.print("Published IR: ");
+    Serial.println(payload);
+}
+
 void setup() {
     Serial.begin(115200);
     servo1.attach(servo1_pin);
@@ -363,6 +374,8 @@ void setup() {
     ledcAttach(ELEC_PIN, PWM_FREQ, PWM_RES);
     ledcWrite(ELEC_PIN, 0); 
 
+    pinMode(IR_PIN, INPUT_PULLUP);
+
     setup_wifi();
     mqttClient.setServer(broker_ip,broker_port);
     mqttClient.setCallback(mqttCallback);
@@ -373,4 +386,19 @@ void loop() {
         reconnect();
     }
     mqttClient.loop();
+
+    int state = digitalRead(IR_PIN);
+    
+    if (state == LOW) {
+        Serial.println("Object Detected!");
+        publishIRdata(state);
+    } else {
+        Serial.println("Nothing here...");
+    }
+    
+    // static unsigned long lastMsg = 0;
+    // if (millis() - lastMsg > 2000) {
+    //     lastMsg = millis();
+    //     publishSensorData();
+    // }
 }
