@@ -133,9 +133,9 @@ class HolonomicPIDController(Node):
 
 #######use this for the sim bot 
         self.pid_params = {
-            'x': {'kp': 3.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 3.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 3.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
         }
 
 #################v
@@ -153,6 +153,8 @@ class HolonomicPIDController(Node):
 
         self.timer = self.create_timer(0.9, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
+        self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
+
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
 
@@ -197,7 +199,8 @@ class HolonomicPIDController(Node):
             error_x = self.target_x-self.current_pose_bot_x
             error_y = self.target_y-self.current_pose_bot_y
             target_yaw = math.atan2(error_y,error_x)
-            error_yaw = target_yaw - self.current_pose_bot_yaw
+            error_yaw = target_yaw - self.current_pose_bot_yaw + math.pi/2
+            # error_yaw = target_yaw - self.current_pose_bot_yaw
             # if self.current_goal_wp == 1:
             #     error_yaw = 0.0 
             #     error_y = -error_y
@@ -215,7 +218,7 @@ class HolonomicPIDController(Node):
             # print(error_x,error_y,error_yaw)
             # print(error_x,error_y,error_yaw)
             # print(dist_error)
-            print(error_x,error_y,error_yaw)
+            print(error_x,error_y,3.14-error_yaw)
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
             pid_yaw = self.pid_yaw.compute(error_yaw,dt)
@@ -240,21 +243,25 @@ class HolonomicPIDController(Node):
             wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
             if self.current_goal_wp == 0 :
-                if dist_error< 190:
+                if dist_error< 190 and (abs(3.14-error_yaw) < 0.2 and abs(3.14-error_yaw) > 0.15) :
+                    pid_x_robot = 0.0 
+                    pid_y_robot = 0.0
+                    pid_yaw = 0.0
                 # if dist_error< 150 and abs(error_yaw) <0.13:
                     self.goal_reached = True
-                if dist_error < 150:
+                if dist_error < 190:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
             elif self.current_goal_wp == 1 :
-                if dist_error< 150 :
+                if dist_error< 190 :
                     self.goal_reached = True
-                if dist_error < 150:
+                if dist_error < 190:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
             else :
-                if abs(error_x) < 2.0 and abs(error_y) < 2.0 and abs(error_yaw) < 0.1:
-                    self.goal_reached = True                 
+                if abs(error_x) < 22.0 and abs(error_y) < 22.0:
+                    self.goal_reached = True  
+                    exit()               
 
             # pose = np.array([pid_x,pid_y,pid_yaw])
 
@@ -262,6 +269,9 @@ class HolonomicPIDController(Node):
             #  1 blue 
             # 2 red 
             # 3 green
+
+            self.publish_wheel_velocities(wheel_velocities)
+
         if self.goal_reached:
 
             if self.current_goal_wp == 0:
@@ -284,19 +294,20 @@ class HolonomicPIDController(Node):
                 time.sleep(4.0)
 
             self.get_logger().info('changign to next goal')
+            
+            if self.current_goal_wp ==2:
+                self.get_logger().info('all the points reached')
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
+                print(self.current_goal_wp)
+                exit()
             self.goal_reached = False
             self.current_goal_wp += 1
-            
-            # print(self.current_goal_wp)
-            if self.current_goal_wp ==3:
-                self.get_logger().info('all the points reached')
-                wheel_velocities = [0.0, 0.0, 0.0,180.0,180.0]
             if self.current_goal_wp < len(self.goals):
                 self.target_x,self.target_y,self.target_yaw = self.goals[self.current_goal_wp]
             self.pid_x.reset()
             self.pid_y.reset()
             self.pid_yaw.reset()
-        self.publish_wheel_velocities(wheel_velocities)
+
 
 
     def publish_wheel_velocities(self, wheel_vel):

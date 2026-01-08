@@ -92,10 +92,16 @@ class navigate_to_assigned_crate(Behaviour):
         self.tick_count = 0 
         self.max_ticks = 30
 
+        # self.pid_params = {
+        #     'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+        #     'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
+        #     'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+        # }
+
         self.pid_params = {
-            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -123,7 +129,7 @@ class navigate_to_assigned_crate(Behaviour):
         error_x = cx-bx
         error_y = cy-by
         target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw - math.pi/2
+        error_yaw = target_yaw - byaw + math.pi/2
 
         # error_yaw = cyaw-byaw
         # correction = -1.03 * cyaw + 0.8
@@ -135,7 +141,7 @@ class navigate_to_assigned_crate(Behaviour):
             error_yaw -= 2 * math.pi    
         while error_yaw < -math.pi:
             error_yaw += 2 * math.pi
-        print(error_x,error_y,error_yaw)
+        print(error_x,error_y,3.14-error_yaw)
 
         pid_x = self.pid_x.compute(error_x,dt)
         pid_y = self.pid_y.compute(error_y,dt)
@@ -149,11 +155,11 @@ class navigate_to_assigned_crate(Behaviour):
 
 
         # pose = np.array([pid_x,pid_y,pid_yaw])
-        pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
+        pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if dist_error<153 and abs(error_yaw) < 0.13:
+        if dist_error<190 and abs(3.14-error_yaw) < 0.2:
             self.tick_count += 1 
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -487,13 +493,7 @@ class HolonomicPIDController(Node):
                                                '/bot_cmd',
                                                10)
         
-        self.attach_client = self.create_client(AttachLink, '/attach_link')
-        while not self.attach_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('wits attach_link service...')
 
-        self.detach_client = self.create_client(DetachLink, '/detach_link')
-        while not self.detach_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('wits deattach_link service...')
 
         self.red_dict, self.green_dict, self.blue_dict ,self.all_crates_dict = {}, {}, {}, {}
         self.crystal_dict, self.frostbite_dict, self.glacio_dict,self.all_bots_dict = {}, {}, {}, {}
@@ -553,7 +553,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [0]
+        bot_ids = [0,2,4]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)
