@@ -5,7 +5,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from hb_interfaces.msg import Pose2D, Poses2D
 from hb_interfaces.msg import BotCmdArray , BotCmd
-from linkattacher_msgs.srv import AttachLink , DetachLink
+from linkattacher_msgs.srv import AttachLink , DetachLink , Attach
 import numpy as np
 import math
 import time
@@ -78,6 +78,17 @@ class HolonomicPIDController(Node):
 
         self.mqtt_client.loop_start() 
 
+        self.attach_server = self.create_service(
+            Attach,
+            'attach',
+            self.attach_callback
+        )
+
+        self.attach_srv = self.create_client(Attach, 'attach')
+        while not self.attach_srv.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for gripper service...')
+
+
         self.bot_pose = self.create_subscription(Poses2D, 
                                                  "/bot_pose", 
                                                  self.pose_cb,
@@ -147,8 +158,8 @@ class HolonomicPIDController(Node):
         # }
 
         self.pid_params = {
-            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'x': {'kp': 8.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
+            'y': {'kp': 8.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
             'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 #################v
@@ -169,6 +180,24 @@ class HolonomicPIDController(Node):
         self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
 
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
+
+    def attach_callback(self, request, response):
+        payload = "TRUE" if request.close else "FALSE"
+        self.mqtt.publish("esp/crystal_elec", payload, qos=1)
+
+        response.success = True
+        response.message = "MQTT published"
+        return response
+    
+    def call_gripper(self, close):
+        req = Attach.Request()
+        req.close = close          # True / False
+
+        future = self.cli.call_async(req)
+        rclpy.spin_until_future_complete(self, future)
+
+        if future.result():
+            self.get_logger().info(future.result().message)
 
 
     def pose_cb(self, msg):
@@ -264,7 +293,7 @@ class HolonomicPIDController(Node):
                 self.goal_reached = True
             elif self.dist_error< 140:
                 self.rotation = True
-                self.publish_wheel_velocities([-150.0, -150.0, -150.0,160.0,180.0])
+                self.publish_wheel_velocities([-850.0, -850.0, -850.0,160.0,180.0])
                 # self.goal_reached = True
 
 
@@ -291,24 +320,31 @@ class HolonomicPIDController(Node):
         if self.goal_reached:
 
             if self.current_goal_wp == 0:
+                self.publish_wheel_velocities([-850.0, -850.0, -850.0,160.0,180.0])
+                time.sleep(1.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
                 self.rotation = False
-                time.sleep(2.0)
-                
+                time.sleep(1.0)
 
-                self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
-                time.sleep(4.0)
+                if not self.cli.service_is_ready():
+                    return
+                req = Attach.Request()
+                req.close = True   
+                self.cli.call_async(req)
+
+                # self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
+                time.sleep(2.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
                 time.sleep(1.0)
 
             if self.current_goal_wp == 1:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
-                time.sleep(2.0)
+                time.sleep(1.0)
 
                 self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
-                time.sleep(4.0)
+                time.sleep(1.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
-                time.sleep(2.0)
+                time.sleep(1.0)
 
             self.get_logger().info('changign to next goal')
             
