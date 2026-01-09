@@ -149,7 +149,7 @@ class HolonomicPIDController(Node):
         self.pid_params = {
             'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
             'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'theta': {'kp': 0.62, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel * 2}
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 #################v
 #######use this for the hard bot 
@@ -164,7 +164,7 @@ class HolonomicPIDController(Node):
         self.pid_yaw = PID(**self.pid_params['theta'])
 
 
-        self.timer = self.create_timer(0.9, self.control_cb) 
+        self.timer = self.create_timer(0.1, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
         self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
 
