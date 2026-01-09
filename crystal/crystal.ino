@@ -4,9 +4,9 @@
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
 #include <Arduino.h>
-#define IR_PIN 13
+#define IR_PIN 21
 
-#define BOT_ID 4  // 0=crystal pink, 2=frostbite purple, 4=glacio red
+#define BOT_ID 0  // 0=crystal pink, 2=frostbite purple, 4=glacio red
 
 #if BOT_ID == 0
   #define CLIENT_ID "ESPcrystal"
@@ -392,6 +392,13 @@ void loop() {
     if (state == LOW) {
         Serial.println("Object Detected!");
         publishIRdata(state);
+    
+        // static unsigned long lastMsg = 0;
+        // if (millis() - lastMsg > 200) {
+        //     lastMsg = millis();
+        //     publishIRdata(state);
+        // }
+
     } else {
         Serial.println("Nothing here...");
     }
