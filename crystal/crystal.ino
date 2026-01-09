@@ -48,11 +48,11 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 #define MAX_FWD 1900
 #define MAX_REV 1100
 
-#define MAX_VEL 500.0
+#define MAX_VEL 1000.0
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
-const char* broker_ip = "10.120.17.233";
+const char* broker_ip = "10.120.17.247";
 const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"

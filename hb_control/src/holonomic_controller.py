@@ -106,6 +106,7 @@ class HolonomicPIDController(Node):
         self.target_y = 0.0
         self.target_yaw = 0.0
         self.docking_zone = [1218.0,205.0,0]
+        self.rotation = False
 
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
@@ -138,13 +139,18 @@ class HolonomicPIDController(Node):
         # ]
         # print(type(self.goals),self.goals[3])
 
-#######use this for the sim bot 
+#######use this for the vansh pid 
+        # self.pid_params = {
+        #     'x': {'kp': 7.5, 'ki': 0.0, 'kd': 8.8, 'max_out': self.max_vel},
+        #     'y': {'kp': 7.5, 'ki': 0.0, 'kd': 8.8, 'max_out': self.max_vel},
+        #     'theta': {'kp': 0.62, 'ki': 0.0, 'kd': 0.02, 'max_out': self.max_vel * 2}
+        # }
+
         self.pid_params = {
             'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
             'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
+            'theta': {'kp': 0.62, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel * 2}
         }
-
 #################v
 #######use this for the hard bot 
         # self.pid_params = {
@@ -196,84 +202,81 @@ class HolonomicPIDController(Node):
         if self.goals is None:
             return 
         
-        now = self.get_clock().now()
-        dt = (now.nanoseconds - self.last_time)/1e9
-        if dt <= 0:
-            return
-        self.last_time = now.nanoseconds
+        if self.rotation == False:
+        
+            now = self.get_clock().now()
+            dt = (now.nanoseconds - self.last_time)/1e9
+            if dt <= 0:
+                return
+            self.last_time = now.nanoseconds
 
-        if not self.goal_reached:
-            error_x = self.target_x-self.current_pose_bot_x
-            error_y = self.target_y-self.current_pose_bot_y
-            target_yaw = math.atan2(error_y,error_x)
-            error_yaw = target_yaw - self.current_pose_bot_yaw + math.pi/2
-            # error_yaw = target_yaw - self.current_pose_bot_yaw
-            # if self.current_goal_wp == 1:
-            #     error_yaw = 0.0 
-            #     error_y = -error_y
+            if not self.goal_reached:
+                error_x = self.target_x-self.current_pose_bot_x
+                error_y = self.target_y-self.current_pose_bot_y
+                target_yaw = math.atan2(error_y,error_x)
+                error_yaw = target_yaw - self.current_pose_bot_yaw + math.pi/2
+                # error_yaw = target_yaw - self.current_pose_bot_yaw
+                # if self.current_goal_wp == 1:
+                #     error_yaw = 0.0 
+                #     error_y = -error_y
 
-            # error_yaw = target_yaw - self.current_pose_bot_yaw
-            # error_yaw = self.target_yaw-self.current_pose_bot_yaw
-            # correction = -1.03 * self.current_pose_crate_yaw + 0.8
-            # error_yaw += correction
-            dist_error = math.sqrt(error_x**2 + error_y**2)
+                # error_yaw = target_yaw - self.current_pose_bot_yaw
+                # error_yaw = self.target_yaw-self.current_pose_bot_yaw
+                # correction = -1.03 * self.current_pose_crate_yaw + 0.8
+                # error_yaw += correction
+                self.dist_error = math.sqrt(error_x**2 + error_y**2)
 
-            while error_yaw > math.pi:
-                error_yaw -= 2 * math.pi    
-            while error_yaw < -math.pi:
-                error_yaw += 2 * math.pi
-            # print(error_x,error_y,error_yaw)
-            # print(error_x,error_y,error_yaw)
-            # print(dist_error)
-            print(error_x,error_y,3.14-error_yaw)
-            pid_x = self.pid_x.compute(error_x,dt)
-            pid_y = self.pid_y.compute(error_y,dt)
-            pid_yaw = self.pid_yaw.compute(error_yaw,dt)
-            # self.pid_x.print()
-            # self.pid_y.print()
-            # self.pid_yaw.print()
-            cos_yaw = math.cos(-self.current_pose_bot_yaw)
-            sin_yaw = math.sin(-self.current_pose_bot_yaw)
-            
-            pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
-            pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+                while error_yaw > math.pi:
+                    error_yaw -= 2 * math.pi    
+                while error_yaw < -math.pi:
+                    error_yaw += 2 * math.pi
+                # print(error_x,error_y,error_yaw)
+                # print(error_x,error_y,error_yaw)
+                # print(dist_error)
+                print(error_x,error_y,3.14-error_yaw)
+                pid_x = self.pid_x.compute(error_x,dt)
+                pid_y = self.pid_y.compute(error_y,dt)
+                pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+                # self.pid_x.print()
+                # self.pid_y.print()
+                # self.pid_yaw.print()
+                cos_yaw = math.cos(-self.current_pose_bot_yaw)
+                sin_yaw = math.sin(-self.current_pose_bot_yaw)
+                
+                pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+                pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
 
-            # if abs(error_yaw) > 0.4:
-            #     pid_x_robot = 0.0
-            #     pid_y_robot = 0.0 
-            # if error_x < 165:
-            #     pid_x_robot = 0.0 
-            # if error_y < 165:
-            #     pid_y_robot = 0.0    
+                # if abs(error_yaw) > 0.4:
+                #     pid_x_robot = 0.0
+                #     pid_y_robot = 0.0 
+                # if error_x < 165:
+                #     pid_x_robot = 0.0 
+                # if error_y < 165:
+                #     pid_y_robot = 0.0    
 
-            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
-            s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
-            if self.current_goal_wp == 0 :
-                if self.ir_state == 0:
-                    self.goal_reached = True
-                elif dist_error< 190 and (abs(3.14-error_yaw) < 0.2 and abs(3.14-error_yaw) > 0.15) :
-                    pid_x_robot = 0.0 
-                    pid_y_robot = 0.0
-                    pid_yaw = 0.0
-                # if dist_error< 150 and abs(error_yaw) <0.13:
-                    self.goal_reached = True
-                elif dist_error < 190:
-                    pid_x_robot = 0.0 
-                    pid_y_robot = 0.0
+                pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+                s_linalg = np.linalg.solve(self.A, pose)
+                wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+                self.publish_wheel_velocities(wheel_velocities)
+        
+        if self.current_goal_wp == 0 :
+            if self.ir_state == 0:
+                self.goal_reached = True
+            elif self.dist_error< 140:
+                self.rotation = True
+                self.publish_wheel_velocities([-150.0, -150.0, -150.0,160.0,180.0])
+                # self.goal_reached = True
 
-            elif self.current_goal_wp == 1 :
-                if dist_error< 190 :
-                    self.goal_reached = True
-                if dist_error < 190:
-                    pid_x_robot = 0.0 
-                    pid_y_robot = 0.0
-                    
-            elif self.current_goal_wp == 2 :
-                if abs(error_x) < 22.0 and abs(error_y) < 22.0:
-                    self.goal_reached = True  
-                    pid_x_robot = 0.0 
-                    pid_y_robot = 0.0
+
+        elif self.current_goal_wp == 1 :
+            if self.dist_error< 100 :
+                self.goal_reached = True
+
+                
+        elif self.current_goal_wp == 2 :
+            if abs(error_x) < 22.0 and abs(error_y) < 22.0:
+                self.goal_reached = True  
+
 
             # pose = np.array([pid_x,pid_y,pid_yaw])
 
@@ -281,15 +284,15 @@ class HolonomicPIDController(Node):
             #  1 blue 
             # 2 red 
             # 3 green
-            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
-            s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
-            self.publish_wheel_velocities(wheel_velocities)
+            # pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+            # s_linalg = np.linalg.solve(self.A, pose)
+            # wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
         if self.goal_reached:
 
             if self.current_goal_wp == 0:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
+                self.rotation = False
                 time.sleep(2.0)
                 
 
