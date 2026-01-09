@@ -92,6 +92,7 @@ class navigate_to_assigned_crate(Behaviour):
         self.tick_count = 0 
         self.max_ticks = 30
 
+# on sim parms 
         # self.pid_params = {
         #     'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
         #     'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},

@@ -246,17 +246,19 @@ class HolonomicPIDController(Node):
             # if error_y < 165:
             #     pid_y_robot = 0.0    
 
-
+            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+            s_linalg = np.linalg.solve(self.A, pose)
+            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
             if self.current_goal_wp == 0 :
-                if self.ir_state == 0:
-                    self.goal_reached = True
-                if dist_error< 190 and (abs(3.14-error_yaw) < 0.2 and abs(3.14-error_yaw) > 0.15) :
+                # if self.ir_state == 0:
+                #     self.goal_reached = True
+                if dist_error< 240 and (abs(3.14-error_yaw) < 0.2 and abs(3.14-error_yaw) > 0.15) :
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
                     pid_yaw = 0.0
                 # if dist_error< 150 and abs(error_yaw) <0.13:
                     self.goal_reached = True
-                elif dist_error < 190:
+                elif dist_error < 240:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
 
@@ -266,6 +268,7 @@ class HolonomicPIDController(Node):
                 if dist_error < 190:
                     pid_x_robot = 0.0 
                     pid_y_robot = 0.0
+                    
             elif self.current_goal_wp == 2 :
                 if abs(error_x) < 22.0 and abs(error_y) < 22.0:
                     self.goal_reached = True  
@@ -278,9 +281,7 @@ class HolonomicPIDController(Node):
             #  1 blue 
             # 2 red 
             # 3 green
-            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
-            s_linalg = np.linalg.solve(self.A, pose)
-            wheel_velocities = [s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+
             self.publish_wheel_velocities(wheel_velocities)
 
         if self.goal_reached:
