@@ -60,13 +60,13 @@ class HolonomicPIDController(Node):
                 sys.exit(1)
 
         def on_message(client, userdata, msg):
-            print(f"[{msg.topic}] {msg.payload.decode()}")
+            # print(f"[{msg.topic}] {msg.payload.decode()}")
             self.ir_state = int(msg.payload.decode())
 
-            if self.ir_state == 0:
-                print("Object Detected")
-            else:
-                print("No Object")
+            # if self.ir_state == 0:
+            #     # print("Object Detected")
+            # else:
+            #     # print("No Object")
 
         def on_disconnect(client, userdata, rc):
             print("Disconnected from broker")
@@ -158,8 +158,8 @@ class HolonomicPIDController(Node):
         # }
 
         self.pid_params = {
-            'x': {'kp': 8.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
-            'y': {'kp': 8.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
+            'x': {'kp': 8.0, 'ki': 0.00, 'kd': 4.1, 'max_out': self.max_vel},
+            'y': {'kp': 8.0, 'ki': 0.00, 'kd': 4.1, 'max_out': self.max_vel},
             'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 #################v
@@ -175,29 +175,28 @@ class HolonomicPIDController(Node):
         self.pid_yaw = PID(**self.pid_params['theta'])
 
 
-        self.timer = self.create_timer(0.1, self.control_cb) 
+        self.timer = self.create_timer(0.07, self.control_cb) 
         self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
         self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
 
         self.get_logger().info(f'Holonomic PID Controller started. Goals: {self.goals}')
 
     def attach_callback(self, request, response):
-        payload = "TRUE" if request.close else "FALSE"
-        self.mqtt.publish("esp/crystal_elec", payload, qos=1)
-
+        payload = "TRUE" if request.data else "FALSE"
+        self.mqtt_client.publish("esp/crystal_elec", payload, qos=1)
         response.success = True
         response.message = "MQTT published"
         return response
     
-    def call_gripper(self, close):
-        req = Attach.Request()
-        req.close = close          # True / False
+    # def call_gripper(self, close):
+    #     req = Attach.request()
+    #     req.close = close          # True / False
 
-        future = self.cli.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
+    #     future = self.cli.call_async(req)
+    #     rclpy.spin_until_future_complete(self, future)
 
-        if future.result():
-            self.get_logger().info(future.result().message)
+    #     if future.result():
+    #         self.get_logger().info(future.result().message)
 
 
     def pose_cb(self, msg):
@@ -321,21 +320,40 @@ class HolonomicPIDController(Node):
 
             if self.current_goal_wp == 0:
                 self.publish_wheel_velocities([-850.0, -850.0, -850.0,160.0,180.0])
-                time.sleep(1.0)
+                time.sleep(0.7)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
                 self.rotation = False
-                time.sleep(1.0)
+                time.sleep(3.0)
 
-                if not self.cli.service_is_ready():
-                    return
-                req = Attach.Request()
-                req.close = True   
-                self.cli.call_async(req)
+                if self.attach_srv.service_is_ready():
+                    req = Attach.Request()
+                    req.data = True   
+                    print('i am here ............')
+                    print('i am here ............')
+                    print('i am here ............')
+                    print('i am here ............')
+                    print('i am here ............')
+                    print('i am here ............')
+                    future = self.attach_srv.call_async(req)
+                    rclpy.spin_until_future_complete(self, future,timeout_sec=5.0)
+
+                
+
+                
+                    print('i am after the future')
+                    print('i am after the future')
+                    print('i am after the future')
+                    print('i am after the future')
+                    print('i am after the future')
+                    print('i am after the future')
+                    # print(req.response)
+                    # print(req.response)
+                    # print(req.response)
+                    # print(req.response)
 
                 # self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
-                time.sleep(2.0)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])
-                time.sleep(1.0)
+                # time.sleep(4.0)
 
             if self.current_goal_wp == 1:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
