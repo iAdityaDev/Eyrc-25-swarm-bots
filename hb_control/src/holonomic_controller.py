@@ -188,6 +188,15 @@ class HolonomicPIDController(Node):
         response.message = "MQTT published"
         return response
     
+
+    def attach_done_cb(self, future):
+        try:
+            response = future.result()
+            self.get_logger().info("Attach service success")
+        except Exception as e:
+            self.get_logger().error(f"Service failed: {e}")
+
+    
     # def call_gripper(self, close):
     #     req = Attach.request()
     #     req.close = close          # True / False
@@ -334,8 +343,11 @@ class HolonomicPIDController(Node):
                     print('i am here ............')
                     print('i am here ............')
                     print('i am here ............')
-                    future = self.attach_srv.call_async(req)
-                    rclpy.spin_until_future_complete(self, future,timeout_sec=5.0)
+                    # future = self.attach_srv.call_async(req)
+
+                    self.future = self.attach_srv.call_async(req)
+                    self.future.add_done_callback(self.attach_done_cb)
+                    # rclpy.spin_until_future_complete(self, future,timeout_sec=5.0)
 
                 
 
