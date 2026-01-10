@@ -352,13 +352,7 @@ class HolonomicPIDController(Node):
                 if self.attach_srv.service_is_ready():
                     req = Attach.Request()
                     req.data = True   
-                    print('i am here ............')
-                    print('i am here ............')
-                    print('i am here ............')
-                    print('i am here ............')
-                    print('i am here ............')
-                    print('i am here ............')
-                    # future = self.attach_srv.call_async(req)
+     
 
                     self.future = self.attach_srv.call_async(req)
                     self.future.add_done_callback(self.attach_done_cb)
@@ -366,17 +360,7 @@ class HolonomicPIDController(Node):
 
                 
 
-                
-                    print('i am after the future')
-                    print('i am after the future')
-                    print('i am after the future')
-                    print('i am after the future')
-                    print('i am after the future')
-                    print('i am after the future')
-                    # print(req.response)
-                    # print(req.response)
-                    # print(req.response)
-                    # print(req.response)
+               
 
                 # self.mqtt_client.publish("esp/crystal_elec", "TRUE", qos=1)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,160.0,180.0])

@@ -1,4 +1,5 @@
-bool data   # name of the model and link respectively
+uint8 bot_id
+bool data
 ---
 bool success          # result of the attach operation
 string message        # Error or success message

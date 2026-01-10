@@ -4,7 +4,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from hb_interfaces.msg import Pose2D, Poses2D
 from hb_interfaces.msg import BotCmdArray , BotCmd
-from linkattacher_msgs.srv import AttachLink , DetachLink
+from linkattacher_msgs.srv import AttachLink , DetachLink ,Attach
 import numpy as np
 import math
 import time 
@@ -92,14 +92,19 @@ class navigate_to_assigned_crate(Behaviour):
         self.tick_count = 0 
         self.max_ticks = 30
         self.ir_topic = None
-        if self.botid == 0:
-            self.ir_topic = "esp/crystal_ir"
-        elif self.botid == 2:
-            self.ir_topic = "esp/frostbite_ir"
-        elif self.botid == 4 :
-            self.ir_topic = "esp/glacio_ir"
+            # if msg.topic == "esp/crystal_ir" : 
+            #     self.ir_state_crsytal = int(msg.payload.decode())
         self.rotation = False
-
+        if self.botid == 0:
+            self.ircheck = self.main_node.ir_state_crystal
+            self.botname = "crystal"
+        elif self.botid == 2:
+            self.ircheck = self.main_node.ir_state_frostbite
+            self.botname = "frostbite"
+        elif self.botid == 4 :
+            self.ircheck = self.main_node.ir_state_glacio
+            self.botname = "glacio"
+        self.ir_value =None
 # on sim parms 
         # self.pid_params = {
         #     'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
@@ -145,13 +150,13 @@ class navigate_to_assigned_crate(Behaviour):
             # correction = -1.03 * cyaw + 0.8
             # correction = 0 
             # error_yaw += correction
-            dist_error = math.sqrt(error_x**2 + error_y**2)
+            self.dist_error = math.sqrt(error_x**2 + error_y**2)
 
             while error_yaw > math.pi:
                 error_yaw -= 2 * math.pi    
             while error_yaw < -math.pi:
                 error_yaw += 2 * math.pi
-            print(error_x,error_y,3.14-error_yaw)
+            
 
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
@@ -168,15 +173,18 @@ class navigate_to_assigned_crate(Behaviour):
             pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
             s_linalg = np.linalg.solve(self.main_node.A, pose)
             wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
-
+            print(wheel_velocities)
+      
             self.main_node.publish_wheel_velocities(wheel_velocities)
-        if self.ir_state == 0:
+            print('print')
+        self.ir_value = self.main_node.ir_state[self.botname]
+        if self.ir_value == 0:
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             self.rotation = False
             return Status.SUCCESS 
 
-        if dist_error<140:
+        if self.dist_error<140:
             self.tick_count += 1 
             self.rotation = True
             wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
@@ -207,6 +215,7 @@ class pickup_crate(Behaviour):
         self.max_ticks_2 = 10
         self.bool = True
 
+
     def setup(self):
         self.logger.debug(f"pickup::setup {self.name}")
 
@@ -222,7 +231,13 @@ class pickup_crate(Behaviour):
         self.tick_count += 1
 
         if self.bool:            
-            self.main_node.mqtt_client.publish(f"esp/{self.botname}_elec", "TRUE", qos=1)
+            if self.main_node.attach_srv.service_is_ready():
+                req = Attach.Request()
+                req.bot_id = self.botid
+                req.data = True
+                self.future = self.main_node.attach_srv.call_async(req)
+                self.future.add_done_callback(self.main_node.attach_done_cb)
+            # self.main_node.mqtt_client.publish(f"esp/{self.botname}_elec", "TRUE", qos=1)
             self.bool = False
 
         if self.tick_count < self.max_ticks:
@@ -471,9 +486,14 @@ class HolonomicPIDController(Node):
 
         broker_ip = "localhost"
         self.mqtt_client = mqtt.Client()
-        self.ir_state_crsytal = None
+        self.ir_state_crystal = None
         self.ir_state_frostbite = None
         self.ir_state_glacio = None
+        self.ir_state = {
+            "crystal": None,
+            "frostbite": None,
+            "glacio": None
+        }
 
 
         def on_connect(client, userdata, flags, rc):
@@ -490,12 +510,12 @@ class HolonomicPIDController(Node):
 
         def on_message(client, userdata, msg):
             print(f"[{msg.topic}] {msg.payload.decode()}")
-            if msg.topic == "esp/crystal_ir" : 
-                self.ir_state_crsytal = int(msg.payload.decode())
-            if msg.topic == "esp/frostbite_ir" : 
-                self.ir_state_frostbite = int(msg.payload.decode())            
-            if msg.topic == "esp/glacio_ir" : 
-                self.ir_state_glacio = int(msg.payload.decode())
+            if msg.topic == "esp/crystal_ir":
+                self.ir_state["crystal"] = int(msg.payload.decode())
+            elif msg.topic == "esp/frostbite_ir":
+                self.ir_state["frostbite"] = int(msg.payload.decode())
+            elif msg.topic == "esp/glacio_ir":
+                self.ir_state["glacio"] = int(msg.payload.decode())
 
 
         def on_disconnect(client, userdata, rc):
@@ -507,6 +527,16 @@ class HolonomicPIDController(Node):
         self.mqtt_client.connect(broker_ip,1883,60)
 
         self.mqtt_client.loop_start() 
+
+        self.attach_server = self.create_service(
+            Attach,
+            'attach',
+            self.attach_callback
+        )
+
+        self.attach_srv = self.create_client(Attach, 'attach')
+        while not self.attach_srv.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Waiting for gripper service...')
 
         self.bot_pose = self.create_subscription(Poses2D, 
                                                  "/bot_pose", 
@@ -556,6 +586,31 @@ class HolonomicPIDController(Node):
         self.timer_bt = self.create_timer(0.5, self.tick_trees)
 
         self.get_logger().info(f'Holonomic PID Controller started.')
+
+        self.BOT_ELEC_TOPIC = {
+            0: "esp/crystal_elec",
+            2: "esp/frostbite_elec",
+            4: "esp/glacio_elec",
+        }
+
+    def attach_callback(self, request, response):
+        topic = self.BOT_ELEC_TOPIC[request.bot_id]
+        payload = "TRUE" if request.data else "FALSE"
+
+        self.mqtt_client.publish(topic, payload, qos=1)
+
+        response.success = True
+        response.message = "MQTT published"
+        return response
+
+    
+
+    def attach_done_cb(self, future):
+        try:
+            response = future.result()
+            self.get_logger().info("Attach service success")
+        except Exception as e:
+            self.get_logger().error(f"Service failed: {e}")
 
     def reset_tree(self, botid):
         tree = self.trees[botid]
@@ -720,6 +775,7 @@ class HolonomicPIDController(Node):
             "elbow":cmd.elbow
         }
         print(json.dumps(data))
+        print('publishing')
         self.mqtt_client.publish("esp/bot_cmd", json.dumps(data))
 
 def main(args=None):
