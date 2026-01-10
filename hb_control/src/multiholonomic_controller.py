@@ -516,8 +516,10 @@ class dock(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if abs(error_x)<25.0 and abs(error_y<25.0):
+        if abs(error_x)<20.0 and abs(error_y<20.0):
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+
             return Status.SUCCESS  
 
         self.main_node.publish_wheel_velocities(wheel_velocities)
