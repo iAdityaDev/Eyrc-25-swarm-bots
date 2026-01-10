@@ -259,22 +259,6 @@ class pickup_crate(Behaviour):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
 class navigate_to_dropzone(Behaviour):
     def __init__(self, name,main_node,botid):
         super(navigate_to_dropzone,self).__init__(name)
@@ -376,22 +360,6 @@ class navigate_to_dropzone(Behaviour):
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
 class drop_crate(Behaviour):
     def __init__(self, name,main_node,botid):
         super(drop_crate,self).__init__(name)
@@ -447,6 +415,31 @@ class drop_crate(Behaviour):
     def terminate(self, new_status):
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+
+
+
 class dock(Behaviour):
     def __init__(self, name,main_node,botid):
         super(dock,self).__init__(name)
@@ -458,9 +451,9 @@ class dock(Behaviour):
         self.max_ticks = 15
 
         self.pid_params = {
-            'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-            'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
+            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -475,11 +468,13 @@ class dock(Behaviour):
         self.logger.debug(f"navigate to crate::initialise {self.name}")
 
     def update(self):
-
+        if self.main_node.bot_to_crate is None:
+            return Status.RUNNING
+        
         if self.botid == 0:
-            cx,cy = (1218.0,130.0)
+            cx,cy = (1210.0,202.0)
         if self.botid == 2:
-            cx,cy = (1593.0,130.0)
+            cx,cy = (1593.0,219.0)
         if self.botid == 4:
             cx,cy = (864.25,130.0)
 
@@ -495,9 +490,9 @@ class dock(Behaviour):
         error_x = cx-bx
         error_y = cy-by
         target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw - math.pi/2
+        error_yaw = target_yaw - byaw + math.pi/2
 
-        dist_error = math.sqrt(error_x**2 + error_y**2)
+        self.dist_error = math.sqrt(error_x**2 + error_y**2)
 
         while error_yaw > math.pi:
             error_yaw -= 2 * math.pi    
@@ -517,20 +512,21 @@ class dock(Behaviour):
 
 
         # pose = np.array([pid_x,pid_y,pid_yaw])
-        pose = np.array([pid_x_robot,pid_y_robot,-pid_yaw])
+        pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if dist_error<100 and abs(error_yaw) < 0.13:
+        if abs(error_x)<25.0 and abs(error_y<25.0):
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             return Status.SUCCESS  
 
         self.main_node.publish_wheel_velocities(wheel_velocities)
-
         return Status.RUNNING
 
     def terminate(self, new_status):
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
+
+
 
 class HolonomicPIDController(Node):
     def __init__(self):
