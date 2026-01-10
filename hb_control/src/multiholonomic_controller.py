@@ -91,6 +91,14 @@ class navigate_to_assigned_crate(Behaviour):
         self.max_vel = 2.0
         self.tick_count = 0 
         self.max_ticks = 30
+        self.ir_topic = None
+        if self.botid == 0:
+            self.ir_topic = "esp/crystal_ir"
+        elif self.botid == 2:
+            self.ir_topic = "esp/frostbite_ir"
+        elif self.botid == 4 :
+            self.ir_topic = "esp/glacio_ir"
+        self.rotation = False
 
 # on sim parms 
         # self.pid_params = {
@@ -127,48 +135,54 @@ class navigate_to_assigned_crate(Behaviour):
             return
         self.last_time = now.nanoseconds
 
-        error_x = cx-bx
-        error_y = cy-by
-        target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw + math.pi/2
+        if self.rotation == False:
+            error_x = cx-bx
+            error_y = cy-by
+            target_yaw = math.atan2(error_y,error_x)
+            error_yaw = target_yaw - byaw + math.pi/2
 
-        # error_yaw = cyaw-byaw
-        # correction = -1.03 * cyaw + 0.8
-        # correction = 0 
-        # error_yaw += correction
-        dist_error = math.sqrt(error_x**2 + error_y**2)
+            # error_yaw = cyaw-byaw
+            # correction = -1.03 * cyaw + 0.8
+            # correction = 0 
+            # error_yaw += correction
+            dist_error = math.sqrt(error_x**2 + error_y**2)
 
-        while error_yaw > math.pi:
-            error_yaw -= 2 * math.pi    
-        while error_yaw < -math.pi:
-            error_yaw += 2 * math.pi
-        print(error_x,error_y,3.14-error_yaw)
+            while error_yaw > math.pi:
+                error_yaw -= 2 * math.pi    
+            while error_yaw < -math.pi:
+                error_yaw += 2 * math.pi
+            print(error_x,error_y,3.14-error_yaw)
 
-        pid_x = self.pid_x.compute(error_x,dt)
-        pid_y = self.pid_y.compute(error_y,dt)
-        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+            pid_x = self.pid_x.compute(error_x,dt)
+            pid_y = self.pid_y.compute(error_y,dt)
+            pid_yaw = self.pid_yaw.compute(error_yaw,dt)
 
-        cos_yaw = math.cos(-byaw)
-        sin_yaw = math.sin(-byaw)
-        
-        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
-        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+            cos_yaw = math.cos(-byaw)
+            sin_yaw = math.sin(-byaw)
+            
+            pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+            pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
 
 
-        # pose = np.array([pid_x,pid_y,pid_yaw])
-        pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
-        s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+            # pose = np.array([pid_x,pid_y,pid_yaw])
+            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+            s_linalg = np.linalg.solve(self.main_node.A, pose)
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if dist_error<190 and abs(3.14-error_yaw) < 0.2:
-            self.tick_count += 1 
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+        if self.ir_state == 0:
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+            self.rotation = False
+            return Status.SUCCESS 
+
+        if dist_error<140:
+            self.tick_count += 1 
+            self.rotation = True
+            wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             if self.tick_count < self.max_ticks:
                 return py_trees.common.Status.RUNNING
-            return Status.SUCCESS  
-
-        self.main_node.publish_wheel_velocities(wheel_velocities)
 
         return Status.RUNNING
 
@@ -457,11 +471,18 @@ class HolonomicPIDController(Node):
 
         broker_ip = "localhost"
         self.mqtt_client = mqtt.Client()
+        self.ir_state_crsytal = None
+        self.ir_state_frostbite = None
+        self.ir_state_glacio = None
+
 
         def on_connect(client, userdata, flags, rc):
             if rc == 0:
                 print("Connected to broker")
                 client.publish("esp/led", "LED_ON", qos=1)
+                self.mqtt_client.subscribe("esp/crystal_ir")
+                self.mqtt_client.subscribe("esp/frostbite_ir")
+                self.mqtt_client.subscribe("esp/glacio_ir")
                 print("Sent LED_ON command")
             else:
                 print(f"Connection failed with code {rc}")
@@ -469,6 +490,13 @@ class HolonomicPIDController(Node):
 
         def on_message(client, userdata, msg):
             print(f"[{msg.topic}] {msg.payload.decode()}")
+            if msg.topic == "esp/crystal_ir" : 
+                self.ir_state_crsytal = int(msg.payload.decode())
+            if msg.topic == "esp/frostbite_ir" : 
+                self.ir_state_frostbite = int(msg.payload.decode())            
+            if msg.topic == "esp/glacio_ir" : 
+                self.ir_state_glacio = int(msg.payload.decode())
+
 
         def on_disconnect(client, userdata, rc):
             print("Disconnected from broker")

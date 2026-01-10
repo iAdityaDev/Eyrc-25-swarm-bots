@@ -158,8 +158,8 @@ class HolonomicPIDController(Node):
         # }
 
         self.pid_params = {
-            'x': {'kp': 7.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
-            'y': {'kp': 7.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
+            'x': {'kp': 8.0, 'ki': 0.00, 'kd': 4.1, 'max_out': self.max_vel},
+            'y': {'kp': 8.0, 'ki': 0.00, 'kd': 4.1, 'max_out': self.max_vel},
             'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 #################v
@@ -169,6 +169,12 @@ class HolonomicPIDController(Node):
         #     'y': {'kp': 0.00, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
         #     'theta': {'kp': 1.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         # }
+
+        self.pid_params = {
+            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+        }
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
@@ -305,7 +311,7 @@ class HolonomicPIDController(Node):
         if self.current_goal_wp == 0 :
             if self.ir_state == 0:
                 self.goal_reached = True
-            elif self.dist_error< 140:
+            elif self.dist_error< 155:
                 self.rotation = True
                 self.publish_wheel_velocities([-850.0, -850.0, -850.0,160.0,180.0])
                 # self.goal_reached = True
@@ -437,4 +443,4 @@ def main(args=None):
     rclpy.shutdown()
 
 if __name__ == '__main__':
-    main()
+    main()  
