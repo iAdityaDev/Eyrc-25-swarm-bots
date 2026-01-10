@@ -158,8 +158,8 @@ class HolonomicPIDController(Node):
         # }
 
         self.pid_params = {
-            'x': {'kp': 8.0, 'ki': 0.00, 'kd': 4.1, 'max_out': self.max_vel},
-            'y': {'kp': 8.0, 'ki': 0.00, 'kd': 4.1, 'max_out': self.max_vel},
+            'x': {'kp': 7.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
+            'y': {'kp': 7.0, 'ki': 0.00, 'kd': 3.6, 'max_out': self.max_vel},
             'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 #################v
@@ -239,13 +239,19 @@ class HolonomicPIDController(Node):
         if self.goals is None:
             return 
         
+        now = self.get_clock().now()
+        dt = (now.nanoseconds - self.last_time)/1e9
+        if dt <= 0:
+            return
+        self.last_time = now.nanoseconds
+        
         if self.rotation == False:
         
-            now = self.get_clock().now()
-            dt = (now.nanoseconds - self.last_time)/1e9
-            if dt <= 0:
-                return
-            self.last_time = now.nanoseconds
+            # now = self.get_clock().now()
+            # dt = (now.nanoseconds - self.last_time)/1e9
+            # if dt <= 0:
+            #     return
+            # self.last_time = now.nanoseconds
 
             if not self.goal_reached:
                 error_x = self.target_x-self.current_pose_bot_x
@@ -306,12 +312,13 @@ class HolonomicPIDController(Node):
 
 
         elif self.current_goal_wp == 1 :
-            if self.dist_error< 100 :
+            if self.dist_error< 50 :
                 self.goal_reached = True
 
                 
         elif self.current_goal_wp == 2 :
             if abs(error_x) < 22.0 and abs(error_y) < 22.0:
+            # if abs(error_x) < 22.0 and abs(error_y) < 22.0:
                 self.goal_reached = True  
 
 
@@ -331,8 +338,10 @@ class HolonomicPIDController(Node):
                 self.publish_wheel_velocities([-850.0, -850.0, -850.0,160.0,180.0])
                 time.sleep(0.7)
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
+                time.sleep(1.0)
+                self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
                 self.rotation = False
-                time.sleep(3.0)
+                # time.sleep(1.0)
 
                 if self.attach_srv.service_is_ready():
                     req = Attach.Request()
@@ -369,7 +378,7 @@ class HolonomicPIDController(Node):
 
             if self.current_goal_wp == 1:
                 self.publish_wheel_velocities([0.0, 0.0, 0.0,180.0,180.0])
-                time.sleep(1.0)
+                time.sleep(0.1)
 
                 self.mqtt_client.publish("esp/crystal_elec", "FALSE", qos=1)
                 time.sleep(1.0)
