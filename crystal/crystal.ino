@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #define IR_PIN 21
 
-#define BOT_ID 4      // 0=crystal pink, 2=frostbite purple, 4=glacio red
+#define BOT_ID 2      // 0=crystal pink, 2=frostbite purple, 4=glacio red
 
 #if BOT_ID == 0
   #define CLIENT_ID "ESPcrystal"
@@ -45,8 +45,10 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 #define STOP_MIN 1446
 #define STOP_MAX 1542
 
-#define MAX_FWD 1900
-#define MAX_REV 1100
+// #define MAX_FWD 1900
+// #define MAX_REV 1100
+#define MAX_FWD 2200
+#define MAX_REV 800
 
 #define MAX_VEL 1000.0
 

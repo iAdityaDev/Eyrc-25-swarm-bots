@@ -105,17 +105,12 @@ class navigate_to_assigned_crate(Behaviour):
             self.ircheck = self.main_node.ir_state_glacio
             self.botname = "glacio"
         self.ir_value =None
-# on sim parms 
-        # self.pid_params = {
-        #     'x': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-        #     'y': {'kp': 0.25, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel},
-        #     'theta': {'kp': 1.5, 'ki': 0.00, 'kd': 0.05, 'max_out': self.max_vel * 2}
-        # }
+
 
         self.pid_params = {
-            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
+            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -176,7 +171,7 @@ class navigate_to_assigned_crate(Behaviour):
             print(wheel_velocities)
       
             self.main_node.publish_wheel_velocities(wheel_velocities)
-            print('print')
+            # print('print')
         self.ir_value = self.main_node.ir_state[self.botname]
         if self.ir_value == 0:
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
@@ -184,7 +179,7 @@ class navigate_to_assigned_crate(Behaviour):
             self.rotation = False
             return Status.SUCCESS 
 
-        if self.dist_error<140:
+        if self.dist_error<147:
             self.tick_count += 1 
             self.rotation = True
             wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
@@ -271,9 +266,9 @@ class navigate_to_dropzone(Behaviour):
         self.rotation = False
 
         self.pid_params = {
-            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
+            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -293,7 +288,7 @@ class navigate_to_dropzone(Behaviour):
         
         if self.botid == 0 :       
             cx,cy = self.main_node.red_D1
-            cx = 1082.0
+            cx = 1042.0
             cy = 1250
         if self.botid == 2:
             cx,cy = self.main_node.red_D1
@@ -323,7 +318,7 @@ class navigate_to_dropzone(Behaviour):
                 error_yaw -= 2 * math.pi    
             while error_yaw < -math.pi:
                 error_yaw += 2 * math.pi
-            print(error_x,error_y,error_yaw)
+            # print(error_x,error_y,error_yaw)
 
             pid_x = self.pid_x.compute(error_x,dt)
             pid_y = self.pid_y.compute(error_y,dt)
@@ -357,7 +352,7 @@ class navigate_to_dropzone(Behaviour):
                     self.rotation = True
 
         if self.botid == 4:
-            if self.dist_error<70:
+            if self.dist_error<140:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 return Status.SUCCESS     
@@ -373,7 +368,7 @@ class navigate_to_dropzone(Behaviour):
             if self.botid == 2:
                 wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if 0.8 <= byaw <= 1.9:  
+                if 1.4 <= byaw <= 1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
@@ -452,9 +447,9 @@ class collisionAvoidance(Behaviour):
         self.max_ticks = 15
 
         self.pid_params = {
-            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
+            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -498,7 +493,7 @@ class collisionAvoidance(Behaviour):
             error_yaw -= 2 * math.pi    
         while error_yaw < -math.pi:
             error_yaw += 2 * math.pi
-        print(error_x,error_y,error_yaw)
+        # print(error_x,error_y,error_yaw)
 
         pid_x = self.pid_x.compute(error_x,dt)
         pid_y = self.pid_y.compute(error_y,dt)
@@ -516,7 +511,7 @@ class collisionAvoidance(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if self.dist_error<50:
+        if self.dist_error<280:
             # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             # self.main_node.publish_wheel_velocities(wheel_velocities)
 
@@ -560,9 +555,9 @@ class dock(Behaviour):
         self.max_ticks = 15
 
         self.pid_params = {
-            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
-            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
+            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
+            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
         self.pid_x = PID(**self.pid_params['x'])
@@ -607,7 +602,7 @@ class dock(Behaviour):
             error_yaw -= 2 * math.pi    
         while error_yaw < -math.pi:
             error_yaw += 2 * math.pi
-        print(error_x,error_y,error_yaw)
+        # print(error_x,error_y,error_yaw)
 
         pid_x = self.pid_x.compute(error_x,dt)
         pid_y = self.pid_y.compute(error_y,dt)
@@ -936,8 +931,8 @@ class HolonomicPIDController(Node):
             "base":cmd.base,
             "elbow":cmd.elbow
         }
-        print(json.dumps(data))
-        print('publishing')
+        # print(json.dumps(data))
+        # print('publishing')
         self.mqtt_client.publish("esp/bot_cmd", json.dumps(data))
 
 def main(args=None):
