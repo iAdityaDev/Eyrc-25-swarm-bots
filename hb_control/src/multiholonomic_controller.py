@@ -107,11 +107,7 @@ class navigate_to_assigned_crate(Behaviour):
         self.ir_value =None
 
 
-        self.pid_params = {
-            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
-            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
-        }
+        self.pid_params = self.main_node.pid_values
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
@@ -265,11 +261,7 @@ class navigate_to_dropzone(Behaviour):
         self.max_ticks = 15
         self.rotation = False
 
-        self.pid_params = {
-            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
-            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
-        }
+        self.pid_params = self.main_node.pid_values
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
@@ -352,21 +344,21 @@ class navigate_to_dropzone(Behaviour):
                     self.rotation = True
 
         if self.botid == 4:
-            if self.dist_error<140:
+            if self.dist_error<17   0:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 return Status.SUCCESS     
             
         if self.rotation == True:
             if self.botid == 0:
-                wheel_velocities = [self.botid,850.0,850.0,850.0,160.0,180.0]
+                wheel_velocities = [self.botid,500.0,550.0,550.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if -0.9 >= byaw >= -1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
             if self.botid == 2:
-                wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
+                wheel_velocities = [self.botid,-550.0,-550.0,-550.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if 1.4 <= byaw <= 1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
@@ -446,11 +438,7 @@ class collisionAvoidance(Behaviour):
         self.tick_count = 0 
         self.max_ticks = 15
 
-        self.pid_params = {
-            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
-            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
-        }
+        self.pid_params = self.main_node.pid_values
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
@@ -554,11 +542,7 @@ class dock(Behaviour):
         self.tick_count = 0 
         self.max_ticks = 15
 
-        self.pid_params = {
-            'x': {'kp': 5.75, 'ki': 0.00, 'kd': 3.75, 'max_out': self.max_vel},
-            'y': {'kp': 5.75, 'ki': 0.00, 'kd': 4.75, 'max_out': self.max_vel},
-            'theta': {'kp': 0.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
-        }
+        self.pid_params = self.main_node.pid_values
 
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
@@ -664,7 +648,7 @@ class HolonomicPIDController(Node):
                 sys.exit(1)
 
         def on_message(client, userdata, msg):
-            print(f"[{msg.topic}] {msg.payload.decode()}")
+            # print(f"[{msg.topic}] {msg.payload.decode()}")
             if msg.topic == "esp/crystal_ir":
                 self.ir_state["crystal"] = int(msg.payload.decode())
             elif msg.topic == "esp/frostbite_ir":
@@ -688,6 +672,14 @@ class HolonomicPIDController(Node):
             'attach',
             self.attach_callback
         )
+        self.max_vel = 0.0 
+
+        self.pid_values = {
+            'x': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'y': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
+            'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+        }
+
 
         self.attach_srv = self.create_client(Attach, 'attach')
         while not self.attach_srv.wait_for_service(timeout_sec=1.0):
