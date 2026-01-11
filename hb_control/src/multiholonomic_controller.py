@@ -292,10 +292,13 @@ class navigate_to_dropzone(Behaviour):
         
         if self.botid == 0 :       
             cx,cy = self.main_node.red_D1
+            cx = 1082.0
+            cy = 1250
         if self.botid == 2:
             cx,cy = self.main_node.red_D1
+            cx = 1250.0
         if self.botid == 4:
-            cx,cy = self.main_node.blue_D2
+            cx,cy = self.main_node.blue_D3
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -341,13 +344,13 @@ class navigate_to_dropzone(Behaviour):
                 return Status.SUCCESS  
 
         if self.botid == 0:
-            if self.dist_error<150:
+            if self.dist_error<30:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 return Status.SUCCESS
             
         if self.botid == 4:
-            if self.dist_error<150:
+            if self.dist_error<70:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 return Status.SUCCESS     
@@ -374,8 +377,8 @@ class drop_crate(Behaviour):
             self.botname = "glacio"
         self.tick_count = 0 
         self.tick_count_2 = 0 
-        self.max_ticks = 15
-        self.max_ticks_2 = 15
+        self.max_ticks = 7
+        self.max_ticks_2 = 7
         self.bool = True
 
     def setup(self):
@@ -418,6 +421,92 @@ class drop_crate(Behaviour):
 
 
 
+class collisionAvoidance(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(collisionAvoidance,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid
+        self.last_time = 0.0
+        self.max_vel = 2.0
+        self.tick_count = 0 
+        self.max_ticks = 15
+
+        self.pid_params = {
+            'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'y': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
+            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 4.0, 'max_out': self.max_vel * 2}
+        }
+
+        self.pid_x = PID(**self.pid_params['x'])
+        self.pid_y = PID(**self.pid_params['y'])
+        self.pid_yaw = PID(**self.pid_params['theta'])
+
+    def setup(self):
+        self.logger.debug(f"navigate to crate::setup {self.name}")
+
+    def initialise(self):
+        self.tick_count = 0 
+        self.logger.debug(f"navigate to crate::initialise {self.name}")
+
+    def update(self):
+        if self.main_node.bot_to_crate is None:
+            return Status.RUNNING
+        if self.botid == 0:
+            return Status.SUCCESS
+        if self.botid == 2:
+            return Status.SUCCESS
+        if self.botid == 4:
+            cx,cy = (742.25,1240.0)
+
+        self.logger.debug(f"navigate to crate::update {self.name}")
+        _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
+
+        now = self.main_node.get_clock().now()
+        dt = (now.nanoseconds - self.last_time)/1e9
+        if dt <= 0:
+            return
+        self.last_time = now.nanoseconds
+
+        error_x = cx-bx
+        error_y = cy-by
+        target_yaw = math.atan2(error_y,error_x)
+        error_yaw = target_yaw - byaw + math.pi/2
+
+        self.dist_error = math.sqrt(error_x**2 + error_y**2)
+
+        while error_yaw > math.pi:
+            error_yaw -= 2 * math.pi    
+        while error_yaw < -math.pi:
+            error_yaw += 2 * math.pi
+        print(error_x,error_y,error_yaw)
+
+        pid_x = self.pid_x.compute(error_x,dt)
+        pid_y = self.pid_y.compute(error_y,dt)
+        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+
+        cos_yaw = math.cos(-byaw)
+        sin_yaw = math.sin(-byaw)
+        
+        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+
+
+        # pose = np.array([pid_x,pid_y,pid_yaw])
+        pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
+        s_linalg = np.linalg.solve(self.main_node.A, pose)
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+
+        if self.dist_error<50:
+            # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+            # self.main_node.publish_wheel_velocities(wheel_velocities)
+
+            return Status.SUCCESS  
+
+        self.main_node.publish_wheel_velocities(wheel_velocities)
+        return Status.RUNNING
+
+    def terminate(self, new_status):
+        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
 
@@ -474,9 +563,9 @@ class dock(Behaviour):
         if self.botid == 0:
             cx,cy = (1210.0,202.0)
         if self.botid == 2:
-            cx,cy = (1593.0,219.0)
+            cx,cy = (1600.0,211.0)
         if self.botid == 4:
-            cx,cy = (864.25,130.0)
+            cx,cy = (859.25,220.0)
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -516,7 +605,7 @@ class dock(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if abs(error_x)<20.0 and abs(error_y<20.0):
+        if abs(error_x)<25.0 and abs(error_y)<25.0:
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
 
@@ -618,9 +707,9 @@ class HolonomicPIDController(Node):
         self.assignments = None
         self.tree = None
         self.red_crate_dropzone = ()
-        self.red_D1 = (1253,1220.2)
-        self.blue_D2 = (810.0,2030.0)
-        self.green_D3 = (820.0,2017.5)
+        self.red_D1 = (1213,1220.2)
+        self.blue_D3 = (1620.0,1980.0)
+        self.green_D2 = (820.0,2017.5)
         self.alpha1 = math.radians(30)
         self.alpha2 = math.radians(150)
         self.alpha3 = math.radians(270)
@@ -703,6 +792,7 @@ class HolonomicPIDController(Node):
         pick_crate = pickup_crate('pick',main_node=self,botid=botid)
         navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
         drope_crate = drop_crate('drop',main_node=self,botid=botid)
+        avoid_collision =  collisionAvoidance('avoid_collision',main_node=self,botid=botid)
         docks = dock('dock',main_node=self,botid=botid)
 
         root.add_children([
@@ -711,6 +801,7 @@ class HolonomicPIDController(Node):
             pick_crate,
             navigate_drop,
             drope_crate,
+            avoid_collision,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)

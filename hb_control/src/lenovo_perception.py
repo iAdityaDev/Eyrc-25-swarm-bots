@@ -286,15 +286,15 @@ class PoseDetector(Node):
                             2
                         )
                     else:
-                        cv2.putText(
-                                undistorted,
-                                f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-                                (int(center[0]) + 10, int(center[1])-10),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.6,
-                                (0, 0, 255),
-                                2
-                            )
+                        # cv2.putText(
+                        #         undistorted,
+                        #         f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                        #         (int(center[0]) + 10, int(center[1])-10),
+                        #         cv2.FONT_HERSHEY_SIMPLEX,
+                        #         0.6,
+                        #         (0, 0, 255),
+                        #         2
+                        #     )
                         print('cratee')
                         print(x_w,y_w,yaw)
                         
