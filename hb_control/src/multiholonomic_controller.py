@@ -268,6 +268,7 @@ class navigate_to_dropzone(Behaviour):
         self.max_vel = 2.0
         self.tick_count = 0 
         self.max_ticks = 15
+        self.rotation = False
 
         self.pid_params = {
             'x': {'kp': 2.75, 'ki': 0.00, 'kd': 0.5, 'max_out': self.max_vel},
@@ -308,55 +309,74 @@ class navigate_to_dropzone(Behaviour):
         if dt <= 0:
             return
         self.last_time = now.nanoseconds
-
-        error_x = cx-bx
-        error_y = cy-by
-        target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw + math.pi/2
-
-        self.dist_error = math.sqrt(error_x**2 + error_y**2)
-
-        while error_yaw > math.pi:
-            error_yaw -= 2 * math.pi    
-        while error_yaw < -math.pi:
-            error_yaw += 2 * math.pi
-        print(error_x,error_y,error_yaw)
-
-        pid_x = self.pid_x.compute(error_x,dt)
-        pid_y = self.pid_y.compute(error_y,dt)
-        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
-
-        cos_yaw = math.cos(-byaw)
-        sin_yaw = math.sin(-byaw)
         
-        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
-        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+        if self.rotation == False:
+
+            error_x = cx-bx
+            error_y = cy-by
+            target_yaw = math.atan2(error_y,error_x)
+            error_yaw = target_yaw - byaw + math.pi/2
+
+            self.dist_error = math.sqrt(error_x**2 + error_y**2)
+
+            while error_yaw > math.pi:
+                error_yaw -= 2 * math.pi    
+            while error_yaw < -math.pi:
+                error_yaw += 2 * math.pi
+            print(error_x,error_y,error_yaw)
+
+            pid_x = self.pid_x.compute(error_x,dt)
+            pid_y = self.pid_y.compute(error_y,dt)
+            pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+
+            cos_yaw = math.cos(-byaw)
+            sin_yaw = math.sin(-byaw)
+            
+            pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+            pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
 
 
-        # pose = np.array([pid_x,pid_y,pid_yaw])
-        pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
-        s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+            # pose = np.array([pid_x,pid_y,pid_yaw])
+            pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
+            s_linalg = np.linalg.solve(self.main_node.A, pose)
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+            
         if self.botid == 2:
-            if self.dist_error<150:
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                self.main_node.publish_wheel_velocities(wheel_velocities)
-                return Status.SUCCESS  
+            if self.rotation == False:
+                if self.dist_error<150:
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.rotation = True 
 
         if self.botid == 0:
-            if self.dist_error<30:
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                self.main_node.publish_wheel_velocities(wheel_velocities)
-                return Status.SUCCESS
-            
+            if self.rotation == False:
+                if self.dist_error<30:
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.rotation = True
+
         if self.botid == 4:
             if self.dist_error<70:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 return Status.SUCCESS     
             
-        self.main_node.publish_wheel_velocities(wheel_velocities)
-        
+        if self.rotation == True:
+            if self.botid == 0:
+                wheel_velocities = [self.botid,850.0,850.0,850.0,160.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                if -0.9 >= byaw >= -1.9:  
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    return Status.SUCCESS  
+            if self.botid == 2:
+                wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                if 0.8 <= byaw <= 1.9:  
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    return Status.SUCCESS  
         return Status.RUNNING
 
     def terminate(self, new_status):
