@@ -290,7 +290,7 @@ class navigate_to_dropzone(Behaviour):
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
-
+         
         now = self.main_node.get_clock().now()
         dt = (now.nanoseconds - self.last_time)/1e9
         if dt <= 0:
@@ -332,7 +332,7 @@ class navigate_to_dropzone(Behaviour):
         if self.botid == 2:
             if self.rotation == False:
                 if self.dist_error<150:
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True 
 
@@ -344,11 +344,12 @@ class navigate_to_dropzone(Behaviour):
                     self.rotation = True
 
         if self.botid == 4:
-            if self.dist_error<17   0:
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                self.main_node.publish_wheel_velocities(wheel_velocities)
-                return Status.SUCCESS     
-            
+            if self.rotation == False:
+                if self.dist_error<30 :
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.rotation = True
+
         if self.rotation == True:
             if self.botid == 0:
                 wheel_velocities = [self.botid,500.0,550.0,550.0,160.0,180.0]
@@ -361,6 +362,13 @@ class navigate_to_dropzone(Behaviour):
                 wheel_velocities = [self.botid,-550.0,-550.0,-550.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if 1.4 <= byaw <= 1.9:  
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    return Status.SUCCESS  
+            if self.botid == 4:
+                wheel_velocities = [self.botid,550.0,550.0,550.0,160.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                if -0.9 >= byaw >= -1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
@@ -560,11 +568,11 @@ class dock(Behaviour):
             return Status.RUNNING
         
         if self.botid == 0:
-            cx,cy = (1210.0,202.0)
+            cx,cy = (1197.0,202.0)
         if self.botid == 2:
-            cx,cy = (1600.0,211.0)
+            cx,cy = (1592.0,204.0)
         if self.botid == 4:
-            cx,cy = (859.25,220.0)
+            cx,cy = (843.25,212.0)
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -604,7 +612,7 @@ class dock(Behaviour):
         s_linalg = np.linalg.solve(self.main_node.A, pose)
         wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
 
-        if abs(error_x)<25.0 and abs(error_y)<25.0:
+        if abs(error_x)<10.0 and abs(error_y)<10.0:
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
 
