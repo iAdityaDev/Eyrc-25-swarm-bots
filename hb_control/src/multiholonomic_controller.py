@@ -413,6 +413,15 @@ class check_other_asssign(Behaviour):
 
     def update(self):
 
+##################################################
+        # if self.botid == 0:
+        #     return Status.SUCCESS
+        if self.botid == 2:
+            return Status.SUCCESS        
+        if self.botid == 4:
+            return Status.SUCCESS
+#####################################################
+
         if self.main_node.unassigned_crates == None:
             return Status.SUCCESS
         
@@ -539,13 +548,13 @@ class HolonomicPIDController(Node):
             self.get_logger().info('wits deattach_link service...')
 
         self.red_dict, self.green_dict, self.blue_dict ,self.all_crates_dict = {}, {}, {}, {}
+        self.all_crates = None
         self.crystal_dict, self.frostbite_dict, self.glacio_dict,self.all_bots_dict = {}, {}, {}, {}
+        self.all_bots = None
         self.bot_to_crate = {}
         self.crate_color_dict = {}
         self.current_pose_bot = None
         self.current_pose_crates = None
-        self.all_bots = None
-        self.all_crates = None
         self.tasks_assigned = False
         self.assigned_crates = None
         self.unassigned_crates = None
@@ -665,7 +674,7 @@ class HolonomicPIDController(Node):
 
     def assign_task_greedy(self):
         if self.tasks_assigned:
-            return  # prevent reassigning
+            return 
 
         if not self.all_bots or not self.all_crates:
             return
@@ -698,6 +707,15 @@ class HolonomicPIDController(Node):
         all_crate_ids = {crate[0] for crate in self.all_crates}
         self.unassigned_crates = list(all_crate_ids - self.assigned_crates)
         self.bot_to_crate = {bot_id: crate_id for bot_id, crate_id in self.assignments}
+
+###########################################
+        # self.bot_to_crate = {
+        #     0 : 35,
+        #     2 : 14,
+        #     4 : 48,
+        # }
+        # self.unassigned_crates = [41]
+###############################################
 
         self.tasks_assigned = True
         if hasattr(self, 'timer'):
