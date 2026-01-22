@@ -132,7 +132,7 @@ class navigate_to_assigned_crate(Behaviour):
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
         cid,cx,cy,cyaw = self.main_node.all_crates_dict[self.main_node.bot_to_crate[self.botid]]
-
+    
         now = self.main_node.get_clock().now()
         dt = (now.nanoseconds - self.last_time)/1e9
         if dt <= 0:
@@ -294,8 +294,7 @@ class navigate_to_dropzone(Behaviour):
         
         if self.botid == 0 :       
             cx,cy = self.main_node.green_D2
-            cx = 1042.0
-            cy = 1250
+
         if self.botid == 4:
             cx,cy = self.main_node.red_D1
             # cx = 1250.0
@@ -390,6 +389,7 @@ class navigate_to_dropzone(Behaviour):
         return Status.RUNNING
 
     def terminate(self, new_status):
+        self.rotation = False
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
@@ -762,7 +762,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [4]
+        bot_ids = [0,2,4]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)

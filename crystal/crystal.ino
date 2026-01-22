@@ -402,6 +402,7 @@ void loop() {
         // }
 
     } else {
+        publishIRdata(state);
         Serial.println("Nothing here...");
     }
     
