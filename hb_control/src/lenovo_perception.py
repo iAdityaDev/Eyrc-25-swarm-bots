@@ -151,7 +151,7 @@ class PoseDetector(Node):
 
             
             gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (1,1), 0)
+            gray = cv2.GaussianBlur(gray, (3,3), 0)
 
             # clahe = cv2.createCLAHE(clipLimit=12.0, tileGridSize=(2,2))
             # gray = clahe.apply(gray)
@@ -286,15 +286,15 @@ class PoseDetector(Node):
                             2
                         )
                     else:
-                        # cv2.putText(
-                        #         undistorted,
-                        #         f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
-                        #         (int(center[0]) + 10, int(center[1])-10),
-                        #         cv2.FONT_HERSHEY_SIMPLEX,
-                        #         0.6,
-                        #         (0, 0, 255),
-                        #         2
-                        #     )
+                        cv2.putText(
+                                undistorted,
+                                f"X: {x_w:.2f}, Y: {y_w:.2f}, Yaw: {yaw:.2f}",
+                                (int(center[0]) + 10, int(center[1])-10),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                0.6,
+                                (0, 0, 255),
+                                2
+                            )
                         print('cratee')
                         print(x_w,y_w,yaw)
                         

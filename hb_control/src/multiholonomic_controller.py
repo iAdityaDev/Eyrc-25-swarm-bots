@@ -4,7 +4,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from hb_interfaces.msg import Pose2D, Poses2D
 from hb_interfaces.msg import BotCmdArray , BotCmd
-from linkattacher_msgs.srv import AttachLink , DetachLink ,Attach
+from linkattacher_msgs.srv import AttachLink , DetachLink, Attach
 import numpy as np
 import math
 import time 
@@ -56,6 +56,14 @@ class PID:
     def reset(self):
         self.integral = 0.0
         self.prev_error = 0.0
+
+
+# def check_crates_assigned(self,bot_id):
+#     for i,(botid,crateid) in enumerate(self.assignments):
+#         if botid ==  bot_id:
+#             return Status.SUCCESS
+#         else : 
+#             return Status.FAILURE
 
 class CheckAsssignments(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -169,13 +177,18 @@ class navigate_to_assigned_crate(Behaviour):
             self.main_node.publish_wheel_velocities(wheel_velocities)
             # print('print')
         self.ir_value = self.main_node.ir_state[self.botname]
-        if self.ir_value == 0:
-            wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-            self.main_node.publish_wheel_velocities(wheel_velocities)
-            self.rotation = False
-            return Status.SUCCESS 
+        # if self.ir_value == 0:
+        #     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+        #     self.main_node.publish_wheel_velocities(wheel_velocities)
+        #     self.rotation = False
+        #     return Status.SUCCESS 
 
         if self.dist_error<147:
+            if self.ir_value == 0:
+                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                self.rotation = False
+                return Status.SUCCESS
             self.tick_count += 1 
             self.rotation = True
             wheel_velocities = [self.botid,-850.0,-850.0,-850.0,160.0,180.0]
@@ -189,6 +202,7 @@ class navigate_to_assigned_crate(Behaviour):
 
     def terminate(self, new_status):
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
+
 
 class pickup_crate(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -279,14 +293,14 @@ class navigate_to_dropzone(Behaviour):
             return Status.RUNNING
         
         if self.botid == 0 :       
-            cx,cy = self.main_node.red_D1
+            cx,cy = self.main_node.green_D2
             cx = 1042.0
             cy = 1250
-        if self.botid == 2:
-            cx,cy = self.main_node.red_D1
-            cx = 1250.0
         if self.botid == 4:
-            cx,cy = self.main_node.blue_D3
+            cx,cy = self.main_node.red_D1
+            # cx = 1250.0
+        if self.botid == 2:
+            cx,cy = self.main_node.green_D2
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -372,6 +386,7 @@ class navigate_to_dropzone(Behaviour):
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
+                
         return Status.RUNNING
 
     def terminate(self, new_status):
@@ -433,111 +448,39 @@ class drop_crate(Behaviour):
     def terminate(self, new_status):
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
-
-
-
-class collisionAvoidance(Behaviour):
+class check_other_asssign(Behaviour):
     def __init__(self, name,main_node,botid):
-        super(collisionAvoidance,self).__init__(name)
+        super(check_other_asssign,self).__init__(name)
         self.main_node = main_node
-        self.botid = botid
-        self.last_time = 0.0
-        self.max_vel = 2.0
-        self.tick_count = 0 
-        self.max_ticks = 15
-
-        self.pid_params = self.main_node.pid_values
-
-        self.pid_x = PID(**self.pid_params['x'])
-        self.pid_y = PID(**self.pid_params['y'])
-        self.pid_yaw = PID(**self.pid_params['theta'])
+        self.botid = botid 
 
     def setup(self):
-        self.logger.debug(f"navigate to crate::setup {self.name}")
+        self.logger.debug(f"pickup::setup {self.name}")
 
     def initialise(self):
-        self.tick_count = 0 
-        self.logger.debug(f"navigate to crate::initialise {self.name}")
+        pass
 
     def update(self):
-        if self.main_node.bot_to_crate is None:
-            return Status.RUNNING
+
+#################################################
         if self.botid == 0:
             return Status.SUCCESS
         if self.botid == 2:
+            return Status.SUCCESS        
+        # if self.botid == 4:
+        #     return Status.SUCCESS
+#####################################################
+
+        if self.main_node.unassigned_crates == None:
             return Status.SUCCESS
-        if self.botid == 4:
-            cx,cy = (742.25,1240.0)
-
-        self.logger.debug(f"navigate to crate::update {self.name}")
-        _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
-
-        now = self.main_node.get_clock().now()
-        dt = (now.nanoseconds - self.last_time)/1e9
-        if dt <= 0:
-            return
-        self.last_time = now.nanoseconds
-
-        error_x = cx-bx
-        error_y = cy-by
-        target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw + math.pi/2
-
-        self.dist_error = math.sqrt(error_x**2 + error_y**2)
-
-        while error_yaw > math.pi:
-            error_yaw -= 2 * math.pi    
-        while error_yaw < -math.pi:
-            error_yaw += 2 * math.pi
-        # print(error_x,error_y,error_yaw)
-
-        pid_x = self.pid_x.compute(error_x,dt)
-        pid_y = self.pid_y.compute(error_y,dt)
-        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
-
-        cos_yaw = math.cos(-byaw)
-        sin_yaw = math.sin(-byaw)
         
-        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
-        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
-
-
-        # pose = np.array([pid_x,pid_y,pid_yaw])
-        pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
-        s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
-
-        if self.dist_error<280:
-            # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-            # self.main_node.publish_wheel_velocities(wheel_velocities)
-
-            return Status.SUCCESS  
-
-        self.main_node.publish_wheel_velocities(wheel_velocities)
+        cid = self.main_node.unassigned_crates[0]
+        self.main_node.bot_to_crate[self.botid] = cid
+        self.main_node.unassigned_crates = None
         return Status.RUNNING
 
     def terminate(self, new_status):
-        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
+        self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
 
 class dock(Behaviour):
@@ -626,6 +569,7 @@ class dock(Behaviour):
 
 
 
+
 class HolonomicPIDController(Node):
     def __init__(self):
         super().__init__('holonomic_pid_controller')  # initializing ros node
@@ -693,6 +637,7 @@ class HolonomicPIDController(Node):
         while not self.attach_srv.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Waiting for gripper service...')
 
+
         self.bot_pose = self.create_subscription(Poses2D, 
                                                  "/bot_pose", 
                                                  self.pose_bot_cb,
@@ -708,28 +653,45 @@ class HolonomicPIDController(Node):
                                                10)
         
 
-
         self.red_dict, self.green_dict, self.blue_dict ,self.all_crates_dict = {}, {}, {}, {}
+        self.all_crates = None
         self.crystal_dict, self.frostbite_dict, self.glacio_dict,self.all_bots_dict = {}, {}, {}, {}
+        self.all_bots = None
         self.bot_to_crate = {}
         self.crate_color_dict = {}
         self.current_pose_bot = None
         self.current_pose_crates = None
-        self.all_bots = None
-        self.all_crates = None
         self.tasks_assigned = False
         self.assigned_crates = None
+        self.unassigned_crates = None
         self.assignments = None
         self.tree = None
+        self.safe_dist = 350.0
+        self.crystal_safe = None
+        self.frostbite_safe = None
+        self.glacio_safe = None
         self.red_crate_dropzone = ()
-        self.red_D1 = (1213,1220.2)
-        self.blue_D3 = (1620.0,1980.0)
-        self.green_D2 = (820.0,2017.5)
+        self.red_D1 = (1215.0,1215.0)
+        self.blue_D3 = (1616.0,2017.5)
+        self.green_D2 = (780.0,2060.5)
         self.alpha1 = math.radians(30)
         self.alpha2 = math.radians(150)
         self.alpha3 = math.radians(270)
         log_tree.level = log_tree.Level.DEBUG
+
+        self.bot_target = {
+            0: None,
+            2: None,
+            4: None
+        }
+        
         self.tree = self.setup_all_trees() 
+
+        self.bot_safe_check= {
+            0 : True,
+            2 : True,
+            4 : True
+        }
 
         self.A = np.array([
             [np.cos(self.alpha1 + np.pi/2), np.cos(self.alpha2 + np.pi/2), np.cos(self.alpha3 + np.pi/2)],
@@ -737,6 +699,7 @@ class HolonomicPIDController(Node):
             [0.185,0.185,0.185]
         ])
 
+        # self.collision_timer = self.create_timer(0.01, self.collision_avoidance)
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
         self.timer_bt = self.create_timer(0.5, self.tick_trees)
 
@@ -747,6 +710,7 @@ class HolonomicPIDController(Node):
             2: "esp/frostbite_elec",
             4: "esp/glacio_elec",
         }
+
 
     def attach_callback(self, request, response):
         topic = self.BOT_ELEC_TOPIC[request.bot_id]
@@ -767,6 +731,7 @@ class HolonomicPIDController(Node):
         except Exception as e:
             self.get_logger().error(f"Service failed: {e}")
 
+
     def reset_tree(self, botid):
         tree = self.trees[botid]
         tree.root.stop(Status.INVALID) 
@@ -778,6 +743,11 @@ class HolonomicPIDController(Node):
 
         for botid,tree in self.trees.items():
             tree.tick()
+
+            check_node = tree.root.children[-2]
+            if check_node.status == Status.RUNNING:
+                self.reset_tree(botid)
+                return
 
             result = tree.root.status
             if result == Status.SUCCESS:
@@ -792,7 +762,7 @@ class HolonomicPIDController(Node):
             self.timer_bt.cancel()
 
     def setup_all_trees(self):
-        bot_ids = [0,2,4]
+        bot_ids = [4]
         self.trees = {}
         for botid in bot_ids:
             self.trees[botid] = self.make_bt_for_bots(botid)
@@ -807,7 +777,7 @@ class HolonomicPIDController(Node):
         pick_crate = pickup_crate('pick',main_node=self,botid=botid)
         navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
         drope_crate = drop_crate('drop',main_node=self,botid=botid)
-        avoid_collision =  collisionAvoidance('avoid_collision',main_node=self,botid=botid)
+        check_other = check_other_asssign('check_other_asssign',main_node=self,botid=botid)
         docks = dock('dock',main_node=self,botid=botid)
 
         root.add_children([
@@ -816,7 +786,7 @@ class HolonomicPIDController(Node):
             pick_crate,
             navigate_drop,
             drope_crate,
-            avoid_collision,
+            check_other,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
@@ -855,12 +825,13 @@ class HolonomicPIDController(Node):
 
     def assign_task_greedy(self):
         if self.tasks_assigned:
-            return  
+            return 
 
         if not self.all_bots or not self.all_crates:
             return
 
         self.assigned_crates = set()
+        self.unassigned_crates = []
         self.assignments = []
 
         for bot in self.all_bots:
@@ -885,7 +856,17 @@ class HolonomicPIDController(Node):
             print(f"Bot {bot_id}  Crate {crate_id}")
 
         all_crate_ids = {crate[0] for crate in self.all_crates}
+        self.unassigned_crates = list(all_crate_ids - self.assigned_crates)
         self.bot_to_crate = {bot_id: crate_id for bot_id, crate_id in self.assignments}
+
+###########################################
+        self.bot_to_crate = {
+            0 : 13,
+            2 : 16,
+            4 : 12,
+        }
+        self.unassigned_crates = [30]
+###############################################
 
         self.tasks_assigned = True
         if hasattr(self, 'timer'):
@@ -911,7 +892,95 @@ class HolonomicPIDController(Node):
         self.all_crates_dict = self.red_dict | self.green_dict | self.blue_dict
 
 
+    # def collision_avoidance(self):
+    #     if not self.all_bots_dict:
+    #         return
+    #     botids = [0,2,4]
+
+    #     for bid in self.bot_safe_check:
+    #         self.bot_safe_check[bid] = True
+
+    #     for botid, (_, bx, by, _) in self.all_bots_dict.items():
+    #         for oid, (_, ox, oy, _) in self.all_bots_dict.items():
+    #             if botid == oid:
+    #                 continue
+
+    #             dist = math.hypot(bx - ox, by - oy)
+    #             if dist < self.safe_dist:
+    #                 # higher id stops
+    #                 if botid > oid:
+    #                     self.bot_safe_check[botid] = False
+
+    def point_to_segment_dist(self,px, py, x1, y1, x2, y2):
+        dx = x2 - x1
+        dy = y2 - y1
+        if dx == 0 and dy == 0:
+            return math.hypot(px - x1, py - y1)
+
+        t = ((px - x1)*dx + (py - y1)*dy) / (dx*dx + dy*dy)
+        t = max(0.0, min(1.0, t))
+
+        cx = x1 + t*dx
+        cy = y1 + t*dy
+        return math.hypot(px - cx, py - cy)
+
+    def collision_avoidance(self):
+        for bid in self.bot_safe_check:
+            self.bot_safe_check[bid] = True
+
+        for botid, (_, bx, by, _) in self.all_bots_dict.items():
+
+            target = self.bot_target.get(botid)
+            if target is None:
+                continue
+
+            tx, ty = target
+            my_dist_to_target = math.hypot(tx - bx, ty - by)
+
+            for oid, (_, ox, oy, _) in self.all_bots_dict.items():
+                if botid == oid:
+                    continue
+
+                other_target = self.bot_target.get(oid)
+                if other_target is None:
+                    continue
+
+                otx, oty = other_target
+                other_dist_to_target = math.hypot(otx - ox, oty - oy)
+
+                dist = self.point_to_segment_dist(
+                    ox, oy,
+                    bx, by,
+                    tx, ty
+                )
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                print(dist)
+                # if (math.hypot(ox-bx,oy-by)>200):
+                #     continue
+
+                if dist < 180.0:
+                    if my_dist_to_target > other_dist_to_target:
+                        self.bot_safe_check[botid] = False
+                    break
+
+
+
     def publish_wheel_velocities(self, wheel_vel):
+            
         msg = BotCmdArray()
         cmd = BotCmd()
         cmd.id = wheel_vel[0]
@@ -920,8 +989,19 @@ class HolonomicPIDController(Node):
         cmd.m3 = wheel_vel[3]
         cmd.base = wheel_vel[4]
         cmd.elbow = wheel_vel[5]
-        msg.cmds = [cmd]
 
+        if not self.bot_safe_check[cmd.id]:
+            cmd.m1 = 0.0
+            cmd.m2 = 0.0
+            cmd.m3 = 0.0
+
+        # if not self.crystal_safe:
+        #     if cmd.id == 0:
+        #         cmd.m1 = 0.0
+        #         cmd.m2 = 0.0
+        #         cmd.m3 = 0.0
+
+        msg.cmds = [cmd]
         self.publisher.publish(msg)
         data =  {
             "id": cmd.id,
@@ -945,4 +1025,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
