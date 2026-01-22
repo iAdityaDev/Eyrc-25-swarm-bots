@@ -294,12 +294,17 @@ class navigate_to_dropzone(Behaviour):
         
         if self.botid == 0 :       
             cx,cy = self.main_node.green_D2
-            
+            cx = 583.0
+            cy = 2100.0
         if self.botid == 4:
             cx,cy = self.main_node.red_D1
+            cx = 1080.0
+            cy = 1200.0
             # cx = 1250.0
         if self.botid == 2:
             cx,cy = self.main_node.green_D2
+            cx = 934.0
+            cy = 2100.0
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -344,7 +349,7 @@ class navigate_to_dropzone(Behaviour):
             
         if self.botid == 2:
             if self.rotation == False:
-                if self.dist_error<150:
+                if self.dist_error<30:
                     wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True 
@@ -365,23 +370,23 @@ class navigate_to_dropzone(Behaviour):
 
         if self.rotation == True:
             if self.botid == 0:
-                wheel_velocities = [self.botid,500.0,550.0,550.0,160.0,180.0]
+                wheel_velocities = [self.botid,500.0,500.0,500.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if -0.9 >= byaw >= -1.9:  
+                if -1.5 >= byaw >= -1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
             if self.botid == 2:
-                wheel_velocities = [self.botid,-550.0,-550.0,-550.0,160.0,180.0]
+                wheel_velocities = [self.botid,-500.0,-500.0,-500.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if 1.4 <= byaw <= 1.9:  
+                if 1.6 <= byaw <= 1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
             if self.botid == 4:
-                wheel_velocities = [self.botid,550.0,550.0,550.0,160.0,180.0]
+                wheel_velocities = [self.botid,500.0,500.0,500.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if -0.9 >= byaw >= -1.9:  
+                if -1.5 <= byaw >= -1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
