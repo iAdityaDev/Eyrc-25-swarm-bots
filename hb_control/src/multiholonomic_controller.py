@@ -183,8 +183,7 @@ class navigate_to_assigned_crate(Behaviour):
         self.ir_value = self.main_node.ir_state[self.botname]
 
         # if self.cratedroppped == 1:
-        if self.botid == 0 :
-            self.dist_error += 10.0
+
         if self.dist_error<147:
             if self.ir_value == 0:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
@@ -279,7 +278,7 @@ class navigate_to_dropzone(Behaviour):
         self.rotation = False
         self.cratedropped = 0
         self.pid_params = self.main_node.pid_values
-
+        self.cratedropped == 0
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
         self.pid_yaw = PID(**self.pid_params['theta'])
@@ -297,16 +296,16 @@ class navigate_to_dropzone(Behaviour):
         
         if self.botid == 0 :       
             cx,cy = self.main_node.green_D2
-            cx = 640.0
-            cy = 2045.0
+            if self.cratedropped == 0:
+                cx = 640.0
+                cy = 2045.0
+            elif self.cratedropped == 1 :
+                cx = 1060.0
+                cy = 1228.0
         if self.botid == 4:
             cx,cy = self.main_node.red_D1
-            if self.cratedropped == 0:
-                cx = 1150.0
-                cy = 1228.0
-            elif self.cratedropped == 1 :
-                cx = 1050.0
-                cy = 1228.0
+            cx = 1150.0
+            cy = 1228.0
             # cx = 1250.0
         if self.botid == 2:
             cx,cy = self.main_node.green_D2
@@ -351,47 +350,55 @@ class navigate_to_dropzone(Behaviour):
             # pose = np.array([pid_x,pid_y,pid_yaw])
             pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
             s_linalg = np.linalg.solve(self.main_node.A, pose)
-            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],140.0,180.0]
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],150.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             
         if self.botid == 2:
             if self.rotation == False:
                 if self.dist_error<30:
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,150.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True 
 
         if self.botid == 0:
             if self.rotation == False:
                 if self.dist_error<30:
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,150.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True
 
         if self.botid == 4:
             if self.rotation == False:
                 if self.dist_error<30 :
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,150.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True
 
         if self.rotation == True:
             if self.botid == 0:
-                wheel_velocities = [self.botid,500.0,500.0,500.0,150.0,180.0]
+                wheel_velocities = [self.botid,500.0,500.0,500.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if -1.35 >= byaw >= -1.9:  
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                    self.main_node.publish_wheel_velocities(wheel_velocities)
-                    return Status.SUCCESS  
+
+                if self.cratedropped == 0:
+                    if -1.5 >= byaw >= -1.9:  
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                        self.main_node.publish_wheel_velocities(wheel_velocities)
+                        return Status.SUCCESS
+                if self.cratedropped == 1:
+                    if -1.2 >= byaw >= -1.9:  
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                        self.main_node.publish_wheel_velocities(wheel_velocities)
+                        return Status.SUCCESS  
+                    
             if self.botid == 2:
-                wheel_velocities = [self.botid,-500.0,-500.0,-500.0,150.0,180.0]
+                wheel_velocities = [self.botid,-500.0,-500.0,-500.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if 1.3 <= byaw <= 1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
             if self.botid == 4:
-                wheel_velocities = [self.botid,500.0,500.0,500.0,150.0,180.0]
+                wheel_velocities = [self.botid,500.0,500.0,500.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if -1.3 >= byaw >= -1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
@@ -478,12 +485,12 @@ class check_other_asssign(Behaviour):
     def update(self):
 
 #################################################
-        if self.botid == 0:
-            return Status.SUCCESS
+        # if self.botid == 0:
+        #     return Status.SUCCESS
         if self.botid == 2:
             return Status.SUCCESS        
-        # if self.botid == 4:
-        #     return Status.SUCCESS
+        if self.botid == 4:
+            return Status.SUCCESS
 #####################################################
 
         if self.main_node.unassigned_crates == None:
@@ -524,7 +531,8 @@ class collisionAvoidance(Behaviour):
         if self.main_node.bot_to_crate is None:
             return Status.RUNNING
         if self.botid == 0:
-            cx,cy = (450.25,1272.0)
+            # cx,cy = (450.25,1272.0)\
+            return Status.SUCCESS
         if self.botid == 2:
             cx,cy = (2045.25,1295.0)
         if self.botid == 4:
