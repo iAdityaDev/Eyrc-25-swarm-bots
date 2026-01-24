@@ -184,7 +184,7 @@ class navigate_to_assigned_crate(Behaviour):
 
         # if self.cratedroppped == 1:
 
-        if self.dist_error<147:
+        if self.dist_error<151:
             if self.ir_value == 0:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -381,12 +381,12 @@ class navigate_to_dropzone(Behaviour):
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
                 if self.cratedropped == 0:
-                    if -1.55 >= byaw >= -1.9:  
+                    if -1.50 >= byaw >= -1.9:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    if -1.35 >= byaw >= -1.9:  
+                    if -1.45 >= byaw >= -1.9:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
@@ -735,7 +735,7 @@ class HolonomicPIDController(Node):
         self.max_vel = 0.0 
 
         self.pid_values = {
-            'x': {'kp': 2.0, 'ki': 0.00, 'kd': 1.0, 'max_out': self.max_vel},
+            'x': {'kp': 2.0, 'ki': 0.00, 'kd': 1.5, 'max_out': self.max_vel},
             'y': {'kp': 2.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
             'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
@@ -807,7 +807,7 @@ class HolonomicPIDController(Node):
             [0.185,0.185,0.185]
         ])
 
-        self.collision_timer = self.create_timer(0.1, self.collision_avoidance)
+        # self.collision_timer = self.create_timer(0.1, self.collision_avoidance)
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
         self.timer_bt = self.create_timer(0.5, self.tick_trees)
 
