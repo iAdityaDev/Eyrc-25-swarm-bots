@@ -296,22 +296,22 @@ class navigate_to_dropzone(Behaviour):
             return Status.RUNNING
         
         if self.botid == 0 :       
-            cx,cy = self.main_node.green_D2
-            if self.cratedropped == 0:
-                cx = 635.0
-                cy = 2045.0
-            elif self.cratedropped == 1 :
-                cx = 1035.0
-                cy = 1238.0
+            cx,cy = self.main_node.red_D1
+            cx = 1125.0
+            cy = 1214.0
         if self.botid == 4:
             cx,cy = self.main_node.red_D1
             cx = 1125.0
             cy = 1214.0
-            # cx = 1250.0
         if self.botid == 2:
-            cx,cy = self.main_node.green_D2
-            cx = 950.0
-            cy = 2045.0
+            if self.cratedropped == 0:
+                cx,cy = self.main_node.green_D2
+                cx = 635.0
+                cy = 2045.0
+            elif self.cratedropped == 1 :
+                cx,cy = self.main_node.red_D1
+                cx = 1035.0
+                cy = 1238.0
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -376,7 +376,16 @@ class navigate_to_dropzone(Behaviour):
                     self.rotation = True
 
         if self.rotation == True:
+
             if self.botid == 0:
+                wheel_velocities = [self.botid,-250.0,-250.0,-250.0,160.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                if 1.3 <= byaw <= 1.9:  
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    return Status.SUCCESS  
+                
+            if self.botid == 2:
                 wheel_velocities = [self.botid,250.0,250.0,250.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
@@ -391,13 +400,6 @@ class navigate_to_dropzone(Behaviour):
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
                     
-            if self.botid == 2:
-                wheel_velocities = [self.botid,-250.0,-250.0,-250.0,160.0,180.0]
-                self.main_node.publish_wheel_velocities(wheel_velocities)
-                if 1.3 <= byaw <= 1.9:  
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                    self.main_node.publish_wheel_velocities(wheel_velocities)
-                    return Status.SUCCESS  
             if self.botid == 4:
                 wheel_velocities = [self.botid,250.0,250.0,250.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -486,10 +488,10 @@ class check_other_asssign(Behaviour):
     def update(self):
 
 #################################################
-        # if self.botid == 0:
-        #     return Status.SUCCESS
-        if self.botid == 2:
-            return Status.SUCCESS        
+        if self.botid == 0:
+            return Status.SUCCESS
+        # if self.botid == 2:
+        #     return Status.SUCCESS        
         if self.botid == 4:
             return Status.SUCCESS
 #####################################################
@@ -807,7 +809,7 @@ class HolonomicPIDController(Node):
             [0.185,0.185,0.185]
         ])
 
-        # self.collision_timer = self.create_timer(0.1, self.collision_avoidance)
+        self.collision_timer = self.create_timer(0.1, self.collision_avoidance)
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
         self.timer_bt = self.create_timer(0.5, self.tick_trees)
 
@@ -852,7 +854,7 @@ class HolonomicPIDController(Node):
         for botid,tree in self.trees.items():
             tree.tick()
 
-            check_node = tree.root.children[-3]
+            check_node = tree.root.children[-2]
             if check_node.status == Status.RUNNING:
                 self.reset_tree(botid)
                 return
@@ -896,7 +898,7 @@ class HolonomicPIDController(Node):
             navigate_drop,
             drope_crate,
             check_other,
-            avoid_collision,
+            # avoid_collision,
             docks,
         ])    
         return py_trees.trees.BehaviourTree(root)
@@ -971,7 +973,7 @@ class HolonomicPIDController(Node):
 
 ###########################################
         self.bot_to_crate = {
-            0 : 13,
+            0 : 21,
             2 : 16,
             4 : 12,
         }
