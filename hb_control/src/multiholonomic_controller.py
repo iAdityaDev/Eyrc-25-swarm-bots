@@ -253,6 +253,7 @@ class pickup_crate(Behaviour):
             return py_trees.common.Status.RUNNING
         self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,165.0,180.0])
 
+
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
             self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,165.0,180.0])
@@ -297,15 +298,15 @@ class navigate_to_dropzone(Behaviour):
         if self.botid == 0 :       
             cx,cy = self.main_node.green_D2
             if self.cratedropped == 0:
-                cx = 640.0
+                cx = 635.0
                 cy = 2045.0
             elif self.cratedropped == 1 :
-                cx = 1060.0
-                cy = 1228.0
+                cx = 1035.0
+                cy = 1238.0
         if self.botid == 4:
             cx,cy = self.main_node.red_D1
-            cx = 1150.0
-            cy = 1228.0
+            cx = 1125.0
+            cy = 1214.0
             # cx = 1250.0
         if self.botid == 2:
             cx,cy = self.main_node.green_D2
@@ -362,45 +363,45 @@ class navigate_to_dropzone(Behaviour):
 
         if self.botid == 0:
             if self.rotation == False:
-                if self.dist_error<30:
+                if self.dist_error<10:
                     wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True
 
         if self.botid == 4:
             if self.rotation == False:
-                if self.dist_error<30 :
+                if self.dist_error<10 :
                     wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True
 
         if self.rotation == True:
             if self.botid == 0:
-                wheel_velocities = [self.botid,500.0,500.0,500.0,160.0,180.0]
+                wheel_velocities = [self.botid,250.0,250.0,250.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
                 if self.cratedropped == 0:
-                    if -1.5 >= byaw >= -1.9:  
+                    if -1.55 >= byaw >= -1.9:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    if -1.2 >= byaw >= -1.9:  
+                    if -1.35 >= byaw >= -1.9:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
                     
             if self.botid == 2:
-                wheel_velocities = [self.botid,-500.0,-500.0,-500.0,160.0,180.0]
+                wheel_velocities = [self.botid,-250.0,-250.0,-250.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if 1.3 <= byaw <= 1.9:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
             if self.botid == 4:
-                wheel_velocities = [self.botid,500.0,500.0,500.0,160.0,180.0]
+                wheel_velocities = [self.botid,250.0,250.0,250.0,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if -1.3 >= byaw >= -1.9:  
+                if -1.1 >= byaw >= -1.7:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
@@ -427,8 +428,8 @@ class drop_crate(Behaviour):
             self.botname = "glacio"
         self.tick_count = 0 
         self.tick_count_2 = 0 
-        self.max_ticks = 14
-        self.max_ticks_2 = 14
+        self.max_ticks = 7
+        self.max_ticks_2 = 1
         self.bool = True
 
     def setup(self):
