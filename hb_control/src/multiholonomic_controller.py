@@ -78,37 +78,7 @@ class CheckAsssignments(Behaviour):
         self.logger.debug(f"initialise {self.name}")
 
     def update(self):
-        print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # print(self.main_node.bot_to_crate)
-        # if self.main_node.bot_to_crate is None:
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
-        #     print('RUNNING')
+        
         if self.main_node.bot_to_crate =={}:
             return Status.RUNNING
         
@@ -396,14 +366,14 @@ class navigate_to_dropzone(Behaviour):
                 if self.cratedropped == 0:
                     wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
                 else:
-                    wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],140.0,150.0]
+                    wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],150.0,140.0]
 
             self.main_node.publish_wheel_velocities(wheel_velocities)
             
         if self.botid == 2:
             if self.rotation == False:
                 if self.dist_error<30:
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,140.0,150.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,150.0,140.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True 
 
@@ -435,7 +405,7 @@ class navigate_to_dropzone(Behaviour):
                 if self.cratedropped == 0:
                     wheel_velocities = [self.botid,350.0,350.0,350.0,160.0,180.0]
                 if self.cratedropped == 1:
-                    wheel_velocities = [self.botid,350.0,350.0,350.0,150.0,140.0]
+                    wheel_velocities = [self.botid,350.0,350.0,350.0,140.0,140.0]
 
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
@@ -490,8 +460,8 @@ class drop_crate(Behaviour):
 
     def initialise(self):
         self.bool = True
-        self.tick_count = 0 
-        self.tick_count_2 = 0 
+        self.tick_count = 0
+        self.tick_count_2 = 0
         self.logger.debug(f"pickup::initialise {self.name}")
     
     def update(self):
@@ -500,7 +470,16 @@ class drop_crate(Behaviour):
         self.tick_count += 1
 
         if self.tick_count < self.max_ticks:
-            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+
+            if self.botid == 2:
+                if self.cratedropped == 0:
+                    self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+                if self.cratedropped == 1:
+                    self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,140.0])
+            else:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+
+
             return py_trees.common.Status.RUNNING
 
         if self.bool:            
@@ -517,7 +496,10 @@ class drop_crate(Behaviour):
         #     self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
         #     return py_trees.common.Status.RUNNING
 
-        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+        if self.botid == 2 and self.cratedropped == 1:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,140.0])
+        else:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
 
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
@@ -525,7 +507,12 @@ class drop_crate(Behaviour):
         return Status.SUCCESS
 
     def terminate(self, new_status):
-        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,145.0,180.0])
+
+        if self.botid == 2 and self.cratedropped == 1:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,140.0])
+        else:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,145.0,180.0])
+
         self.cratedropped = 1
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
@@ -663,6 +650,7 @@ class dock(Behaviour):
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
         self.pid_yaw = PID(**self.pid_params['theta'])
+        self.cratedropped = 1
 
     def setup(self):
         self.logger.debug(f"navigate to crate::setup {self.name}")
@@ -719,7 +707,13 @@ class dock(Behaviour):
         # pose = np.array([pid_x,pid_y,pid_yaw])
         pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
         s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],165.0,180.0]
+
+
+        if self.botid == 2 and self.cratedropped == 1:
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],150.0,140.0]
+        else:
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],165.0,180.0]
+
 
         if abs(error_x)<10.0 and abs(error_y)<10.0:
             wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
@@ -731,6 +725,7 @@ class dock(Behaviour):
         return Status.RUNNING
 
     def terminate(self, new_status):
+        self.cratedropped = 1
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
