@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #define IR_PIN 21
 
-#define BOT_ID 4      // 0=crystal pink, 2=frostbite purple, 4=glacio red
+#define BOT_ID 0      // 0=crystal pink, 2=frostbite purple, 4=glacio red
 
 #if BOT_ID == 0
   #define CLIENT_ID "ESPcrystal"
@@ -47,14 +47,16 @@ const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
 
 // #define MAX_FWD 1900
 // #define MAX_REV 1100
-#define MAX_FWD 2200
-#define MAX_REV 800
+// #define MAX_FWD 2200
+// #define MAX_REV 800
+#define MAX_FWD 2400
+#define MAX_REV 600
 
 #define MAX_VEL 1000.0
 
 const char* ssid = "OPPO";     // stored in the flash not in the memory pointer
 const char* password = "123456789";
-const char* broker_ip = "10.158.92.247";
+const char* broker_ip = "172.27.148.247";
 const int broker_port = 1883;
 
 #define CMD_TOPIC "esp/bot_cmd"
