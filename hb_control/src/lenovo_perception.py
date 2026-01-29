@@ -90,6 +90,8 @@ class PoseDetector(Node):
             7: (3, 2),  # BR
         }
 
+        self.homo_calculated = False
+
         self.get_logger().info('PoseDetector initialized')
 
     def pixel_to_world(self, pixel_x, pixel_y):
@@ -170,17 +172,25 @@ class PoseDetector(Node):
 
             corners, ids, rejected = self.detector.detectMarkers(gray)
 
-                            
+            # print(ids)          
             if ids is not None:
                cv2.aruco.drawDetectedMarkers(undistorted, corners, ids)
             
+            required_ids = {1, 3, 5, 7}
 
-            if ids is not None:
-                for i, marker_id in enumerate(ids.flatten()):
-                    if marker_id in self.corner_map:
-                        mat_idx, corner_idx = self.corner_map[marker_id]
-                        x, y = corners[i][0][corner_idx]
-                        self.pixel_matrix[mat_idx] = [float(x), float(y)]
+            if ids is not None and not self.homo_calculated:
+                detected_ids = set(ids.flatten())
+
+                # Check if all required markers are visible
+                if required_ids.issubset(detected_ids):
+
+                    for i, marker_id in enumerate(ids.flatten()):
+                        if marker_id in self.corner_map:
+                            mat_idx, corner_idx = self.corner_map[marker_id]
+                            x, y = corners[i][0][corner_idx]
+                            self.pixel_matrix[mat_idx] = [float(x), float(y)]
+                            self.homo_calculated = True
+                            print(self.homo_calculated)
 
             # # Step 4: Derive the Pixel Matrix and the World Matrix using Corner Markers
             # # Identify corner markers (IDs 1, 3, 5, 7)
@@ -295,8 +305,8 @@ class PoseDetector(Node):
                                 (0, 0, 255),
                                 2
                             )
-                        print('cratee')
-                        print(x_w,y_w,yaw)
+                        # print('cratee')
+                        # print(x_w,y_w,yaw)
                         
                     if marker_id==0 or marker_id == 2 or marker_id == 4 :
                         bot_pose={

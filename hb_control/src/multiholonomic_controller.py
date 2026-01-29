@@ -124,7 +124,6 @@ class navigate_to_assigned_crate(Behaviour):
         self.pid_y = PID(**self.pid_params['y'])
         self.pid_yaw = PID(**self.pid_params['theta'])
 
-
     def setup(self):
         self.logger.debug(f"navigate to crate::setup {self.name}")
 
@@ -145,89 +144,67 @@ class navigate_to_assigned_crate(Behaviour):
             return
         self.last_time = now.nanoseconds
 
-        error_x = cx-bx
-        error_y = cy-by
-        target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw + math.pi/2
+        if self.rotation == False:
+            error_x = cx-bx
+            error_y = cy-by
+            target_yaw = math.atan2(error_y,error_x)
+            error_yaw = target_yaw - byaw + math.pi/2
 
-        # error_yaw = cyaw-byaw
-        # correction = -1.03 * cyaw + 0.8
-        # correction = 0 
-        # error_yaw += correction
-        dist_error = math.sqrt(error_x**2 + error_y**2)
+            # error_yaw = cyaw-byaw
+            # correction = -1.03 * cyaw + 0.8
+            # correction = 0 
+            # error_yaw += correction
+            self.dist_error = math.sqrt(error_x**2 + error_y**2)
+            
 
-        while error_yaw > math.pi:
-            error_yaw -= 2 * math.pi    
-        while error_yaw < -math.pi:
-            error_yaw += 2 * math.pi
-        print(error_x,error_y,error_yaw)
+            while error_yaw > math.pi:
+                error_yaw -= 2 * math.pi    
+            while error_yaw < -math.pi:
+                error_yaw += 2 * math.pi
+            
 
-        pid_x = self.pid_x.compute(error_x,dt)
-        pid_y = self.pid_y.compute(error_y,dt)
-        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+            pid_x = self.pid_x.compute(error_x,dt)
+            pid_y = self.pid_y.compute(error_y,dt)
+            pid_yaw = self.pid_yaw.compute(error_yaw,dt)
 
-        cos_yaw = math.cos(-byaw)
-        sin_yaw = math.sin(-byaw)
-        
-        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
-        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+            cos_yaw = math.cos(-byaw)
+            sin_yaw = math.sin(-byaw)
+            
+            pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+            pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
 
 
-        # pose = np.array([pid_x,pid_y,pid_yaw])
-
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
-        # print(dist_error)
+            # pose = np.array([pid_x,pid_y,pid_yaw])
+            pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
+            s_linalg = np.linalg.solve(self.main_node.A, pose)
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],140.0,180.0]
+            print(wheel_velocities)
+      
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+            # print('print')
         self.ir_value = self.main_node.ir_state[self.botname]
 
+        # if self.cratedroppped == 1:
 
+        if self.dist_error<151:
+            if self.ir_value == 0:
+                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                self.rotation = False
+                return Status.SUCCESS
+            self.tick_count += 1 
+            self.rotation = True
+            wheel_velocities = [self.botid,-150.0,-150.0,-150.0,140.0,180.0]
+            if self.botid == 2 :
+                wheel_velocities = [self.botid,850.0,850.0,850.0,140.0,180.0]
+            self.main_node.publish_wheel_velocities(wheel_velocities)
+            if self.tick_count < self.max_ticks:
+                return py_trees.common.Status.RUNNING
 
-
-        if dist_error<153:
-
-            pid_x_robot = 0.0
-            pid_y_robot = 0.0
-            print(error_yaw)
-            print(error_yaw)
-            print(error_yaw)
-            print(error_yaw)
-            print(error_yaw)
-            print(error_yaw)
-
-
-            if (error_yaw) < 0.01:
-                print('i am coming hereeeeeeeee')
-                print('i am coming hereeeeeeeee')
-                print('i am coming hereeeeeeeee')
-                print('i am coming hereeeeeeeee')
-                print('i am coming hereeeeeeeee')
-                print('i am coming hereeeeeeeee')
-
-                if self.ir_value == 0:
-                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                    self.main_node.publish_wheel_velocities(wheel_velocities)
-                    return Status.SUCCESS
-        
-
-        pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
-        s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],140.0,180.0]
-
-        self.main_node.publish_wheel_velocities(wheel_velocities)
         return Status.RUNNING
-    
+
     def terminate(self, new_status):
+        # self.cratedroppped == 1
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
@@ -428,7 +405,7 @@ class navigate_to_dropzone(Behaviour):
                 if self.cratedropped == 0:
                     wheel_velocities = [self.botid,350.0,350.0,350.0,160.0,180.0]
                 if self.cratedropped == 1:
-                    wheel_velocities = [self.botid,350.0,350.0,350.0,170.0,90.0]
+                    wheel_velocities = [self.botid,350.0,350.0,350.0,150.0,90.0]
 
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
@@ -439,7 +416,7 @@ class navigate_to_dropzone(Behaviour):
                         return Status.SUCCESS
                 if self.cratedropped == 1:
                     if -0.5 <= byaw <= 0.6:  
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,170.0,90.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,150.0,90.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
                     
@@ -498,7 +475,10 @@ class drop_crate(Behaviour):
                 if self.cratedropped == 0:
                     self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
                 if self.cratedropped == 1:
-                    self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,90.0])
+                    for i in range(3):
+                        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0+float(i*10),90.0])
+
+                    self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,90.0])
             else:
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
 
@@ -813,7 +793,7 @@ class HolonomicPIDController(Node):
         self.pid_values = {
             'x': {'kp': 2.0, 'ki': 0.0, 'kd': 1.5, 'max_out': self.max_vel},
             'y': {'kp': 2.0, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
-            'theta': {'kp': 12.50, 'ki': 0.00, 'kd': 10.0, 'max_out': self.max_vel * 2}
+            'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
 
