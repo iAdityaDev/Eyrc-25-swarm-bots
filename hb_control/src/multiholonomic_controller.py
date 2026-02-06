@@ -120,6 +120,14 @@ class navigate_to_assigned_crate(Behaviour):
 
         self.pid_params = self.main_node.pid_values
 
+        if self.botid == 2:
+            if self.cratedroppped == 1:
+                self.pid_values = {
+                    'x': {'kp': 2.0, 'ki': 0.0, 'kd': 1.5, 'max_out': self.max_vel},
+                    'y': {'kp': 2.0, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
+                    'theta': {'kp': 3.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+                }
+
         self.pid_x = PID(**self.pid_params['x'])
         self.pid_y = PID(**self.pid_params['y'])
         self.pid_yaw = PID(**self.pid_params['theta'])
@@ -187,28 +195,56 @@ class navigate_to_assigned_crate(Behaviour):
 
         # if self.cratedroppped == 1:
 
-        if self.dist_error<151:
-            if self.ir_value == 0:
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+        if self.botid == 2 and self.cratedroppped == 1:
+            if self.dist_error<161:
+                if self.ir_value == 0:
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.rotation = False
+                    return Status.SUCCESS
+                self.tick_count += 1 
+                self.rotation = True
+                wheel_velocities = [self.botid,-150.0,-150.0,-150.0,140.0,180.0]
+                if self.botid == 2 :
+                    if self.cratedroppped == 0:
+                        wheel_velocities = [self.botid,150.0,150.0,150.0,140.0,180.0]
+                    if self.cratedroppped == 1:
+                        wheel_velocities = [self.botid,-150.0,-150.0,-150.0,140.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                self.rotation = False
-                return Status.SUCCESS
-            self.tick_count += 1 
-            self.rotation = True
-            wheel_velocities = [self.botid,-150.0,-150.0,-150.0,140.0,180.0]
-            if self.botid == 2 :
-                wheel_velocities = [self.botid,150.0,150.0,150.0,140.0,180.0]
-            self.main_node.publish_wheel_velocities(wheel_velocities)
-            if self.tick_count < self.max_ticks:
-                return py_trees.common.Status.RUNNING
+                if self.tick_count < self.max_ticks:
+                    return py_trees.common.Status.RUNNING
+        else:
+            if self.dist_error<151:
+                if self.ir_value == 0:
+                    wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                   
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+                    self.main_node.publish_wheel_velocities(wheel_velocities)
+
+                    self.rotation = False
+                    return Status.SUCCESS
+                self.tick_count += 1 
+                self.rotation = True
+                wheel_velocities = [self.botid,-150.0,-150.0,-150.0,140.0,180.0]
+                if self.botid == 2 :
+                    if self.cratedroppped == 0:
+                        wheel_velocities = [self.botid,150.0,150.0,150.0,140.0,180.0]
+                    if self.cratedroppped == 1:
+                        wheel_velocities = [self.botid,-150.0,-150.0,-150.0,140.0,180.0]
+                self.main_node.publish_wheel_velocities(wheel_velocities)
+                if self.tick_count < self.max_ticks:
+                    return py_trees.common.Status.RUNNING
 
         return Status.RUNNING
 
     def terminate(self, new_status):
-        # self.cratedroppped == 1
+        if self.botid == 2:
+            self.cratedroppped = 1
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
@@ -268,6 +304,7 @@ class pickup_crate(Behaviour):
 
 
     def terminate(self, new_status):
+        self.cratedropped = 1
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
 
@@ -306,14 +343,14 @@ class navigate_to_dropzone(Behaviour):
         
         if self.botid == 0 :       
             cx,cy = self.main_node.red_D1
-            cx = 1095.0
+            cx = 1085.0
             cy = 1224.0
             cb_yaw = -1.55
         if self.botid == 4:
             cx,cy = self.main_node.red_D1
             cx = 1400.0
-            cy = 1220.0
-            cb_yaw = 1.60
+            cy = 1215.0
+            cb_yaw = 1.65
         if self.botid == 2:
             if self.cratedropped == 0:
                 cx,cy = self.main_node.green_D2
@@ -325,7 +362,7 @@ class navigate_to_dropzone(Behaviour):
                 _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
                 _,cx2,cy2,_ = self.main_node.all_crates_dict[21]
                 cx = (cx1+cx2)/2
-                cy = (cy1+cy2)/2-138.0
+                cy = (cy1+cy2)/2-145.0
                 cb_yaw = 0.0
 
         self.logger.debug(f"navigate to crate::update {self.name}")
@@ -371,7 +408,7 @@ class navigate_to_dropzone(Behaviour):
 
             if self.botid == 2:
                 if self.cratedropped == 0:
-                    wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+                    wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],145.0,180.0]
                 else:
                     wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],167.0,90.0]
 
@@ -391,14 +428,14 @@ class navigate_to_dropzone(Behaviour):
 
         if self.botid == 0:
             if self.rotation == False:
-                if self.dist_error<10:
+                if self.dist_error<14:
                     wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True
 
         if self.botid == 4:
             if self.rotation == False:
-                if self.dist_error<10 :
+                if self.dist_error<14 :
                     wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     self.rotation = True
@@ -427,7 +464,7 @@ class navigate_to_dropzone(Behaviour):
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    if -0.03 <= byaw <= 0.1:  
+                    if 0.01 <= byaw <= 0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
@@ -435,7 +472,7 @@ class navigate_to_dropzone(Behaviour):
             if self.botid == 4:
                 wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
-                if 1.59 >= byaw <= 1.61:  
+                if 1.62 >= byaw <= 1.65:  
                     wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     return Status.SUCCESS  
@@ -800,8 +837,8 @@ class HolonomicPIDController(Node):
         self.max_vel = 0.0 
 
         self.pid_values = {
-            'x': {'kp': 2.0, 'ki': 0.0, 'kd': 1.5, 'max_out': self.max_vel},
-            'y': {'kp': 2.0, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
+            'x': {'kp': 8.0, 'ki': 0.0, 'kd': 1.5, 'max_out': self.max_vel},
+            'y': {'kp': 8.0, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
             'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
 
@@ -874,7 +911,7 @@ class HolonomicPIDController(Node):
 
         self.collision_timer = self.create_timer(0.1, self.collision_avoidance)
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
-        self.timer_bt = self.create_timer(0.5, self.tick_trees)
+        self.timer_bt = self.create_timer(0.05, self.tick_trees)
 
         self.get_logger().info(f'Holonomic PID Controller started.')
 
