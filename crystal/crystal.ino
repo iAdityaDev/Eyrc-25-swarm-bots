@@ -1,3 +1,14 @@
+// ▪ 
+// ▪  Team Id: HB_1005
+// ▪  Author List: Aditya Dev Singh,Vansh Gupta,Anurag Choudhary,Moulik Garg
+// ▪  Filename: crystal.ino
+// ▪  Theme: Holo_Battalion
+// ▪  Functions: setup_wifi, mqttCallback, reconnect, velocityToPWM, publishIRdata, setup, loop
+// ▪  Global Variables: ssid, password, broker_ip, broker_port, v1, v2, v3, base_angle, elbow_angle
+// ▪  Global Constants: IR_PIN, BOT_ID, CLIENT_ID, ELEC_TOPIC, IR_TOPIC, servo1_pin, servo2_pin, servo3_pin, base_servo_pin, elbow_servo_pin, 
+//                     ELEC_PIN, PWM_CHANNEL, PWM_FREQ, PWM_RES, NEUTRAL, STOP_MIN, STOP_MAX, MAX_FWD, MAX_REV, MAX_VEL, CMD_TOPIC, LED_TOPIC, SENSOR_TOPIC 
+// ▪ 
+
 #include "WiFi.h"
 #include "PubSubClient.h"
 #include <string.h>
@@ -68,6 +79,17 @@ static float v1=0, v2=0, v3=0 ,base_angle=0,elbow_angle=0;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 
+
+
+// * Function Name: setup_wifi
+// * Input: None (uses global variables `ssid` and `password`)
+// * Output: None 
+// * Logic: 
+// *   - Initiates WiFi connection using stored SSID and password.
+// *   - Waits until connected or until 20 attempts (500ms delay each).
+// *   - If connection fails after 20 attempts, restarts the ESP32.
+// *   - If successful, prints confirmation .
+// * Example Call: setup_wifi();
 static inline void setup_wifi(){
     // WiFi.mode(WIFI_STA);
     // WiFi.setHostname("Crystal");
@@ -86,6 +108,23 @@ static inline void setup_wifi(){
     Serial.println(WiFi.localIP());
 }
 
+// * Function Name: mqttCallback
+// * Input: 
+// *   - topic : MQTT topic on which message is received
+// *   - payload : data
+// *   - length : Length of payload
+// * Output: None
+// * Logic:
+// *   - Parses incoming JSON data using ArduinoJson.
+// *   - If topic == CMD_TOPIC:
+// *        → Extracts id, motor velocities (m1, m2, m3), base and elbow angles.
+// *        → If BOT_ID matches received id, publishes motor PWM and servo angles.
+// *   - If topic == LED_TOPIC:
+// *        → Converts payload to string.
+// *        → Turns onboard LED ON/OFF based on command.
+// *   - If topic == ELEC_TOPIC:
+// *        → Controls PWM output on ELEC_PIN .
+// * Example Call: Automatically called when mqttClient.loop() processes a message.
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message arrived on topic: ");
     StaticJsonDocument<256> doc;
@@ -100,21 +139,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         float base = doc["base"];
         float elbow = doc["elbow"];
         if (BOT_ID == id){
-            // Serial.println(m1);
-            // Serial.println(m2);
-            // Serial.println(m3);
-            // Serial.println(base);
-            // Serial.println(elbow);
-            
-            // v1 = Step_vel(m1, v1);
-            // v2 = Step_vel(m2, v2);
-            // v3 = Step_vel(m3, v3);
-            // v1 = smoothVel(m1, v1);
-            // v2 = smoothVel(m2, v2);
-            // v3 = smoothVel(m3, v3);
-            // servo1.writeMicroseconds(velocityToPWM(-v1));    
-            // servo2.writeMicroseconds(velocityToPWM(-v2));
-            // servo3.writeMicroseconds(velocityToPWM(-v3));
             servo1.writeMicroseconds(velocityToPWM(-m1));
             servo2.writeMicroseconds(velocityToPWM(-m2));
             servo3.writeMicroseconds(velocityToPWM(-m3));
@@ -153,6 +177,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 }
 
+// * Function Name: reconnect
+// * Input: None
+// * Output: None
+// * Logic:
+// *   - Continuously checks MQTT connection status.
+// *   - If not connected, attempts to reconnect using CLIENT_ID.
+// *   - On success, subscribes to LED_TOPIC, CMD_TOPIC, ELEC_TOPIC.
+// *   - On failure, retries after 5 seconds.
+// * Example Call: reconnect();
 void reconnect() {
     while (!mqttClient.connected()) {
         Serial.print("Attempting MQTT connection...");
@@ -171,6 +204,18 @@ void reconnect() {
     }
 }
 
+// * Function Name: velocityToPWM
+// * Input: 
+// *   - vel : Desired motor velocity
+// * Output: 
+// *   - int: Corresponding PWM pulse width in microseconds
+// * Logic:
+// *   - If velocity is zero, returns NEUTRAL pulse.
+// *   - If velocity > 0 → maps velocity proportionally between STOP_MAX and MAX_FWD.
+// *   - If velocity < 0 → maps velocity proportionally between STOP_MIN and MAX_REV.
+// *   - Constrains final pulse within safe PWM range.
+// * Example Call: 
+// *   int pwm = velocityToPWM(500.0);
 int velocityToPWM(float vel) {
 
     if (vel == 0) return NEUTRAL;
@@ -187,176 +232,13 @@ int velocityToPWM(float vel) {
     return constrain(pulse, MAX_REV, MAX_FWD);
 }
 
-
-// float smoothVel(float target, float &current) {
-//     if (target == 0.0) return target ;                          
-//     float step = 10.0; // limit per cycle
-//     if (target > current) current += step;
-//     else if (target < current) current -= step;
-//     return current;
-// }
-
-
-// float Step_vel(float target, float &current) {
-//     if (target == 0.0) return target ;      
-                        
-//     // if (current>=0.0 && current<=20.0 && target <= 20.0 ){
-//     //     return target;
-
-//     // }
-//     // if (current>=0.0 && current<20.0 && target >= 20.0 ){
-//     //     return 20.0;
-
-//     // }
-//     // else if(current >= 20.0 && current <= 100.0 && target >= 20.0 && target <= 100.0){
-//     //     return target;
-//     // }
-//     // else if(current >= 20.0 && current<100.0 && target>=100.0){
-//     //      return 100.0;
-//     // }
-
-//     // else if(current >= 100.0 ){
-//     //      return target;
-//     // }
-//     // else if(current >target ){
-//     //      return target;
-//     // }
-
-
-//     else if (current <= 0.0 && current >= -20.0 && target >= -20.0) {
-//         return target;
-//     }
-//     else if (current <= 0.0 && current > -20.0 && target <= -20.0) {
-//         return -20.0;
-//     }
-//     else if (current <= -20.0 && current >= -100.0 && target <= -20.0 && target >= -100.0) {
-//         return target;
-//     }
-//     else if (current <= -20.0 && current > -100.0 && target <= -100.0) {
-//         return -100.0;
-//     }
-
-//     // ---------- -150 ----------
-//     else if (current <= -100.0 && current >= -150.0 && target >= -150.0) {
-//         return target;
-//     }
-//     else if (current <= -100.0 && current > -150.0 && target <= -150.0) {
-//         return -150.0;
-//     }
-
-//     // ---------- -200 ----------
-//     else if (current <= -150.0 && current >= -200.0 && target <= -150.0 && target >= -200.0) {
-//         return target;
-//     }
-//     else if (current <= -150.0 && current > -200.0 && target <= -200.0) {
-//         return -200.0;
-//     }
-//     else if (current <= -200.0) {
-//         return target;
-//     }
-
-//     // ---------- FALLBACK ----------
-//     else if (current < target) {
-//         return target;
-//     }
-    
-
-// }
-
-// float Step_vel(float target, float current)
-// {
-//     // If already at target
-//     if (current == target)
-//         return current;
-
-//     // If direction is changing, go to zero first
-//     if ((current > 0 && target < 0) || (current < 0 && target > 0))
-//     {
-//         if (current != 0.0f)
-//             return 0.0f;
-//     }
-
-//     // Determine direction
-//     float dir = (target > current) ? 1.0f : -1.0f;
-
-//     float abs_current = fabs(current);
-//     float abs_target  = fabs(target);
-    
-//     // Step ladder
-//     if (abs_current < 20.0f)
-//         return dir * 20.0f;
-
-//     else if (abs_current < 100.0f)
-//         return dir * 100.0f;
-
-//     else if (abs_current < 200.0f)
-//         return dir * 200.0f;
-
-//     // Clamp to target if beyond
-//     return target;
-// }
-
-// float smoothVel(float target, float &current) {
-//     target = constrain(target, -MAX_VEL, MAX_VEL);
-//     current = constrain(current, -MAX_VEL, MAX_VEL);
-//     if (target == 0.0) return target ;
-//     if ((targetcurrent)<0.0) return 0.0 ;
-//     float alpha = 0.1; 
-//     if (abs(current-target)<=10){
-//         float alpha = 1.0;
-//     }
-//     if ((abs(current-target))>10 && (abs(current-target))<=50){
-//         float alpha = 0.5;
-//     }
-//     if ((abs(current-target))>100 && (abs(current-target))<=100){
-//         float alpha = 0.25;
-//     }
-//     if ((abs(current-target))>100) && (abs(current-target))<=150){
-//         float alpha = 0.2;
-//     }
-//     if ((abs(current-target))>150 && (abs(current-target))<=200){
-//         float alpha = 0.125;
-//     }
-//     current += alpha (target - current);
-//     return current;
-// }
-
-
-// float smoothVel(float target, float &current) {
-//     target  = constrain((target/5),  -MAX_VEL, MAX_VEL);
-//     current = constrain((current/5), -MAX_VEL, MAX_VEL);
-
-//     // If target is zero, smoothly bring current to zero
-//     if (target == 0.0) {
-        
-//         return target;
-//     }
-
-//     // If direction changes, stop first
-//     if ((target * current) < 0.0) {
-//         current = 0.0;
-//         return current;
-//     }
-
-//     float error = abs(target - current);
-//     float alpha = 0.1;
-
-//     if (error <= 10) {
-//         alpha = 1.0;
-//     } else if (error <= 50) {
-//         alpha = 0.5;
-//     } else if (error <= 100) {
-//         alpha = 0.25;
-//     } else if (error <= 150) {
-//         alpha = 0.2;
-//     } else if (error <= 200) {
-//         alpha = 0.125;
-//     }
-
-//     current += alpha * (target - current);
-//     return current;
-// }
-
+// * Function Name: publishIRdata
+// * Input: 
+// *   - state (int): Digital state of IR sensor (LOW/HIGH)
+// * Output: None
+// * Logic:
+// *   - Publishes the state to IR_TOPIC via MQTT.
+// * Example Call: publishIRdata(digitalRead(IR_PIN));
 void publishIRdata(int state) {
     String payload = String(state);
     mqttClient.publish(IR_TOPIC, payload.c_str());
@@ -364,6 +246,18 @@ void publishIRdata(int state) {
     Serial.println(payload);
 }
 
+// * Function Name: setup
+// * Input: None
+// * Output: None
+// * Logic:
+// *   - Initializes Serial communication (115200 baud).
+// *   - Attaches all motor and arm servos to respective pins.
+// *   - Configures onboard LED pin as OUTPUT and sets it LOW.
+// *   - Initializes PWM for ELEC_PIN and sets initial duty cycle to 0.
+// *   - Configures IR sensor pin as INPUT_PULLUP.
+// *   - Connects to WiFi using setup_wifi().
+// *   - Sets MQTT broker address and registers callback function.
+// * Example Call: Automatically executed once at startup.
 void setup() {
     Serial.begin(115200);
     servo1.attach(servo1_pin);
@@ -385,6 +279,14 @@ void setup() {
     mqttClient.setCallback(mqttCallback);
 }
 
+// * Function Name: loop
+// * Input: None
+// * Output: None
+// * Logic:
+// *   - Processes incoming MQTT messages using mqttClient.loop().
+// *   - Reads IR sensor state.
+// *   - Runs continuously as main execution loop.
+// * Example Call: Automatically runs repeatedly after setup().
 void loop() {
     if (!mqttClient.connected()) {
         reconnect();
@@ -407,10 +309,4 @@ void loop() {
         publishIRdata(state);
         Serial.println("Nothing here...");
     }
-    
-    // static unsigned long lastMsg = 0;
-    // if (millis() - lastMsg > 2000) {
-    //     lastMsg = millis();
-    //     publishSensorData();
-    // }
 }
