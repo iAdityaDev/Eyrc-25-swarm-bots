@@ -154,7 +154,7 @@ class PoseDetector(Node):
 
             
             gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(1,1))
             gray = clahe.apply(gray)
            
  
@@ -190,10 +190,10 @@ class PoseDetector(Node):
             
             # Step 5: Compute the Homography Matrix
             # Use cv2.findHomography() with pixel and world points
-            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 70, 0.0003)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_COUNT, 170, 0.0003)
             self.pixel_matrix = cv2.cornerSubPix(gray, self.pixel_matrix, (10,10), (-1,-1), criteria)
        
-            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 0.5)
+            self.H_matrix, status = cv2.findHomography(self.pixel_matrix, self.world_matrix,cv2.RANSAC, 1.0)
 
             # Step 6: Convert center pixel of markers to world coordinates
             # For each detected marker (excluding corner markers):
@@ -205,7 +205,7 @@ class PoseDetector(Node):
                 for i ,marker_id in enumerate(ids.flatten()):
                     marker_id = ids[i][0]
 
-                
+                    
                     if marker_id in [1, 3, 5, 7]:
                         continue
 
