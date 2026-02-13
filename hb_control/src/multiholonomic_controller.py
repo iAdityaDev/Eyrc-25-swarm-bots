@@ -359,10 +359,10 @@ class navigate_to_dropzone(Behaviour):
             elif self.cratedropped == 1 :
                 cx,cy = self.main_node.red_D1
                         
-                _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
-                _,cx2,cy2,_ = self.main_node.all_crates_dict[21]
-                cx = (cx1+cx2)/2
-                cy = (cy1+cy2)/2-145.0
+                # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
+                # _,cx2,cy2,_ = self.main_node.all_crates_dict[21]
+                # cx = (cx1+cx2)/2
+                # cy = (cy1+cy2)/2-145.0
                 cb_yaw = 0.0
 
         self.logger.debug(f"navigate to crate::update {self.name}")
@@ -571,6 +571,10 @@ class check_other_asssign(Behaviour):
         self.main_node = main_node
         self.botid = botid 
 
+        self.crystal_reassigned = False
+        self.frostbite_reassigned = False
+        self.glacio_reassigned = False
+
     def setup(self):
         self.logger.debug(f"pickup::setup {self.name}")
 
@@ -580,20 +584,35 @@ class check_other_asssign(Behaviour):
     def update(self):
 
 #################################################
-        if self.botid == 0:
-            return Status.SUCCESS
+        # if self.botid == 0:
+        #     return Status.SUCCESS
         # if self.botid == 2:
         #     return Status.SUCCESS        
-        if self.botid == 4:
+        # if self.botid == 4:
+        #     return Status.SUCCESS
+        if self.crystal_reassigned:
+            return Status.SUCCESS
+        if self.frostbite_reassigned:
+            return Status.SUCCESS        
+        if self.glacio_reassigned :
             return Status.SUCCESS
 #####################################################
 
-        if self.main_node.unassigned_crates == None:
-            return Status.SUCCESS
+        # if self.main_node.unassigned_crates == None:
+        #     return Status.SUCCESS
         
-        cid = self.main_node.unassigned_crates[0]
+        if self.botid == 0:
+            cid = self.main_node.unassigned_crates[0]
+            self.crystal_reassigned = True
+        if self.botid == 2:
+            cid = self.main_node.unassigned_crates[1]
+            self.frostbite_reassigned = True
+        if self.botid == 4:
+            cid = self.main_node.unassigned_crates[2]
+            self.glacio_reassigned = True
+
         self.main_node.bot_to_crate[self.botid] = cid
-        self.main_node.unassigned_crates = None
+        # self.main_node.unassigned_crates = None
         return Status.RUNNING
 
     def terminate(self, new_status):
@@ -909,9 +928,9 @@ class HolonomicPIDController(Node):
             [0.185,0.185,0.185]
         ])
 
-        self.collision_timer = self.create_timer(0.1, self.collision_avoidance)
+        self.collision_timer = self.create_timer(0.05, self.collision_avoidance)
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
-        self.timer_bt = self.create_timer(0.1, self.tick_trees)
+        self.timer_bt = self.create_timer(0.05, self.tick_trees)
 
         self.get_logger().info(f'Holonomic PID Controller started.')
 
@@ -1074,11 +1093,11 @@ class HolonomicPIDController(Node):
 
 ###########################################
         self.bot_to_crate = {
-            0 : 21,
+            0 : 11,
             2 : 16,
             4 : 12,
         }
-        self.unassigned_crates = [30]
+        self.unassigned_crates = [8,13,30]
 
 ###############################################
 
@@ -1146,17 +1165,6 @@ class HolonomicPIDController(Node):
 
             target = self.bot_target.get(botid)
 
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
-            # print(target)
             if target is None:
                 continue
             
@@ -1180,25 +1188,6 @@ class HolonomicPIDController(Node):
                     bx, by,
                     tx, ty
                 )
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # print(dist)
-                # if (math.hypot(ox-bx,oy-by)>200):
-                #     continue
-
                 if dist < 260.0:
                     if my_dist_to_target > other_dist_to_target:
                         self.bot_safe_check[botid] = False
