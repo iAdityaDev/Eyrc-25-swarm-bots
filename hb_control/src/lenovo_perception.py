@@ -138,7 +138,7 @@ class PoseDetector(Node):
         """
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            cv_image = cv_image[:,380:1450]
+            cv_image = cv_image[:,445:1510]
             # Step 2: Undistort the image using camera intrinsics
             # Use cv2.undistort() with camera_matrix and dist_coeffs
             # Convert to grayscale for marker detection
