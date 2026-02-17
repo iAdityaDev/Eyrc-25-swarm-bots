@@ -170,7 +170,7 @@ class navigate_to_assigned_crate(Behaviour):
             # pose = np.array([pid_x,pid_y,pid_yaw])
             pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
             s_linalg = np.linalg.solve(self.main_node.A, pose)
-            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],140.0,180.0]
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],165.0,180.0]
             print(wheel_velocities)
       
             self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -179,7 +179,7 @@ class navigate_to_assigned_crate(Behaviour):
 
         # if self.cratedroppped == 1:
 
-        if self.dist_error<160:
+        if self.dist_error<230:
             if self.ir_value == 0:
                 wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                 
@@ -190,7 +190,7 @@ class navigate_to_assigned_crate(Behaviour):
                 return Status.SUCCESS
             self.tick_count += 1 
             self.rotation = True
-            wheel_velocities = [self.botid,-500.0,-500.0,-500.0,140.0,180.0]
+            wheel_velocities = [self.botid,-25.0,-25.0,-25.0,165.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             if self.tick_count < self.max_ticks:
                 return py_trees.common.Status.RUNNING
@@ -216,8 +216,8 @@ class pickup_crate(Behaviour):
             self.botname = "glacio"
         self.tick_count = 0 
         self.tick_count_2 = 0 
-        self.max_ticks = 10
-        self.max_ticks_2 = 10
+        self.max_ticks = 50
+        self.max_ticks_2 = 15
         self.bool = True
 
 
@@ -246,13 +246,14 @@ class pickup_crate(Behaviour):
             self.bool = False
 
         if self.tick_count < self.max_ticks:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
             return py_trees.common.Status.RUNNING
-        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,165.0,180.0])
 
 
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
-            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,165.0,180.0])
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
+            print(' i am hereeeeeeeeee')
             return py_trees.common.Status.RUNNING
         return Status.SUCCESS
 
@@ -308,9 +309,9 @@ class navigate_to_dropzone(Behaviour):
         if self.botid == 4:
             if self.cratedropped == 0:    
                 cx,cy = self.main_node.red_D1
-                cx = 1400.0
-                cy = 1215.0
-                cb_yaw = 1.65
+                cx = 1468.0
+                cy = 1190.0
+                cb_yaw = 1.6
             elif self.cratedropped == 1:    
                 cx,cy = self.main_node.red_D1
                 cx = 1070.0
@@ -408,7 +409,7 @@ class navigate_to_dropzone(Behaviour):
 
         if self.botid == 4:
             if self.rotation == False:
-                if self.dist_error<5 :
+                if self.dist_error<8 :
                     if self.cratedropped == 0:
                         wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -454,7 +455,7 @@ class navigate_to_dropzone(Behaviour):
                 wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,160.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if self.cratedropped == 0:
-                    if 1.62 >= byaw <= 1.65:  
+                    if 1.59 >= byaw <= 1.61:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
@@ -843,9 +844,9 @@ class HolonomicPIDController(Node):
         self.max_vel = 0.0 
 
         self.pid_values = {
-            'x': {'kp': 8.0, 'ki': 0.0, 'kd': 2.5, 'max_out': self.max_vel},
-            'y': {'kp': 8.0, 'ki': 0.0, 'kd': 0.0, 'max_out': self.max_vel},
-            'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+            'x': {'kp': 8.0, 'ki': 0.0, 'kd': 4.0, 'max_out': self.max_vel},
+            'y': {'kp': 8.0, 'ki': 0.0, 'kd': 4.0, 'max_out': self.max_vel},
+            'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 3.0, 'max_out': self.max_vel * 2}
         }
 
 
@@ -917,7 +918,7 @@ class HolonomicPIDController(Node):
 
         self.collision_timer = self.create_timer(0.05, self.collision_avoidance)
         self.timer = self.create_timer(0.5, self.assign_task_greedy)
-        self.timer_bt = self.create_timer(0.05, self.tick_trees)
+        self.timer_bt = self.create_timer(0.05, self.tick_trees)    
 
         self.get_logger().info(f'Holonomic PID Controller started.')
 
