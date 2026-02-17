@@ -1,6 +1,6 @@
 // ▪ 
 // ▪  Team Id: HB_1005
-// ▪  Author List: Aditya Dev Singh,Vansh Gupta,Anurag Choudhary,Moulik Garg
+// ▪  Author List:Vansh Gupta,Aditya Dev Singh,Anurag Choudhary,Moulik Garg
 // ▪  Filename: crystal.ino
 // ▪  Theme: Holo_Battalion
 // ▪  Functions: setup_wifi, mqttCallback, reconnect, velocityToPWM, publishIRdata, setup, loop

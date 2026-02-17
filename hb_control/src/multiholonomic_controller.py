@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+
+# Team Id : HB_1005
+# Author List : Vansh Gupta , Aditya Dev Singh , Anurag Choudhary , Moulik Garg
+# Filename: multiholonomic_controllers.py
+# Theme: Holo Battalion
+# Functions :
+#   main(),attach_callback(),attach_done_cb(),reset_tree(),tick_trees(),setup_all_trees(),make_bt_for_bots(),crate_color()
+#   pose_bot_cb(),assign_task_greedy(),pose_crate_cb(),point_to_segment_dist(),collision_avoidance(),publish_wheel_velocities()
+# Classes :
+#   PID,CheckAsssignments,navigate_to_assigned_crate,pickup_crate,navigate_to_dropzone,drop_crate,check_other_asssign
+#   collisionAvoidance,dock,HolonomicPIDController
+# Global Variables : None
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -32,6 +45,23 @@ import sys
 #   data: '{\"model1_name\": \"hb_crystal\", \"link1_name\": \"arm_link_2\", \"model2_name\": \"crate_red_18\", \"link2_name\": \"box_link_17\"}'
 # }"
 
+# Class Name: PID
+# FUnction Name: __init__ : intializes the main variables  
+#                 compute : compute the velocity based on the error and the Kp,Kd,Ki
+#                  print : print the output velocities
+#                  reset : reset the prev_error and intergral values 
+# * Input: __init__ : kp , kd , ki , max output   
+#           compute : error,dt
+#            print : None
+#            reset : None
+# * OutPut: __init__ : None 
+#           compute : self.output velocity
+#            print : velocity
+#            reset : None
+# * Logic: This class acts as the controller object for the pid control of the bot
+# * Example Call: pid = PID(8.0, 0.0, 4.0)
+#                 velocity = pid.compute(10.0, 0.02)
+
 class PID:
     def __init__(self, kp, ki, kd, max_out=1.0):
         self.kp = kp
@@ -57,6 +87,27 @@ class PID:
         self.integral = 0.0
         self.prev_error = 0.0
         
+# Class Name: CheckAsssignments
+# FUnction Name: __init__ : initializes the behaviour with main node reference and bot id  
+#                 setup : called once when behaviour tree is set up  
+#                 initialise : called every time the behaviour starts running  
+#                 update : checks whether the bot has been assigned a crate  
+#                 terminate : called when behaviour stops running  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS / FAILURE)  
+#           terminate : None  
+# * Logic: This class checks if a bot has been assigned a crate.  
+#          If no assignments exist keeps running.  
+#          If the bot has a crate assigned , SUCCESS 
+#          If not assigned , FAILURE
+# * Example Call: check = CheckAsssignments("CheckAssign", main_node, 1)
 
 class CheckAsssignments(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -84,6 +135,28 @@ class CheckAsssignments(Behaviour):
     def terminate(self, new_status):
         self.logger.debug(f"Action::terminate {self.name} to {new_status}")
 
+# Class Name: navigate_to_assigned_crate
+# FUnction Name: __init__ : initializes navigation behaviour, PID controllers and bot parameters  
+#                 setup : called during tree setup  
+#                 initialise : resets tick counter when behaviour starts  
+#                 update : navigates the bot towards its assigned crate using PID control  
+#                 terminate : called when behaviour ends  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class moves the assigned bot towards its allocated crate.  
+#          It calculates position and yaw error, applies PID control,  
+#          converts global velocities to robot frame, solves inverse kinematics,  
+#          and publishes wheel velocities.  
+#          When close enough and IR detects crate, it stops and returns SUCCESS.  
+# * Example Call: assisgned_to_navigate_vrate = navigate_to_assigned_crate("NavToCrate", main_node, 0)
 
 class navigate_to_assigned_crate(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -201,6 +274,27 @@ class navigate_to_assigned_crate(Behaviour):
         self.cratedroppped = 1
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
+# Class Name: pickup_crate
+# FUnction Name: __init__ : initializes pickup behaviour and bot parameters  
+#                 setup : called during tree setup  
+#                 initialise : resets counters and flags  
+#                 update : attaches the crate and controls pickup timing  
+#                 terminate : called when behaviour ends  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class handles crate pickup.  
+#          It calls the attach service, keeps the bot stationary  
+#          for fixed ticks to ensure proper gripping, and then  
+#          returns SUCCESS after completion.  
+# * Example Call: pickup = pickup_crate("PickupCrate", main_node, 0)
 
 class pickup_crate(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -262,6 +356,28 @@ class pickup_crate(Behaviour):
         self.cratedropped = 1
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
+
+# Class Name: navigate_to_dropzone
+# FUnction Name: __init__ : initializes navigation to dropzone and PID controllers  
+#                 setup : called during tree setup  
+#                 initialise : resets tick counter  
+#                 update : navigates bot to its dropzone and aligns orientation  
+#                 terminate : resets flags after completion  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class moves the bot carrying a crate to its designated dropzone.  
+#          It computes position and yaw error using PID control,  
+#          publishes wheel velocities, and performs final orientation alignment.  
+#          Returns SUCCESS once correctly positioned and aligned.  
+# * Example Call: drop_nav = navigate_to_dropzone("NavToDrop", main_node, 0)
 
 class navigate_to_dropzone(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -472,6 +588,26 @@ class navigate_to_dropzone(Behaviour):
         self.cratedropped = 1
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
+# Class Name: drop_crate
+# FUnction Name: __init__ : initializes drop behaviour and bot parameters  
+#                 setup : called during tree setup  
+#                 initialise : resets counters and flags  
+#                 update : detaches the crate and controls drop timing  
+#                 terminate : final wheel stop and flag update  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class handles crate dropping.  
+#          calls the detach service to release the crate,  
+#          and returns SUCCESS after completion.  
+# * Example Call: drop = drop_crate("DropCrate", main_node, 0)
 
 class drop_crate(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -553,6 +689,28 @@ class drop_crate(Behaviour):
         self.cratedropped = 1
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
+# Class Name: check_other_asssign
+# FUnction Name: __init__ : initializes reassignment flags for each bot  
+#                 setup : called during tree setup  
+#                 initialise : no specific initialization  
+#                 update : reassigns unassigned crates to bots if available  
+#                 terminate : called when behaviour ends  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class checks for remaining unassigned crates and reassigns  
+#          them to the respective bot. Once reassigned, it returns SUCCESS.  
+#          Otherwise, it keeps running until assignment is done.  
+# * Example Call: reass = check_other_asssign("CheckReassign", main_node, 0)
+
+
 class check_other_asssign(Behaviour):
     def __init__(self, name,main_node,botid):
         super(check_other_asssign,self).__init__(name)
@@ -605,6 +763,27 @@ class check_other_asssign(Behaviour):
 
     def terminate(self, new_status):
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
+
+# Class Name: collisionAvoidance
+# FUnction Name: __init__ : initializes automatic local collision avoidance manager  
+#                 setup : called during tree setup  
+#                 initialise : resets variables  
+#                 update : detects nearby bots and redirects to avoid collision  
+#                 terminate : called when behaviour ends  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class automatically checks inter-bot distance.  
+#          If bots are too close, it generates a temporary avoidance motion  
+#          using PID control. Returns SUCCESS once safe distance is achieved.  
+# * Example Call: avoid = collisionAvoidance("CollisionAvoid", main_node, 4)
 
 class collisionAvoidance(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -690,6 +869,25 @@ class collisionAvoidance(Behaviour):
     def terminate(self, new_status):
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
+# Class Name: dock
+# FUnction Name: __init__ : initializes docking manager  
+#                 setup : called during tree setup  
+#                 initialise : resets variables  
+#                 update : moves bot to its dock position  
+#                 terminate : called when behaviour ends  
+# * Input: __init__ : name , main_node , botid  
+#           setup : None  
+#           initialise : None  
+#           update : None  
+#           terminate : new_status  
+# * OutPut: __init__ : None  
+#           setup : None  
+#           initialise : None  
+#           update : Status (RUNNING / SUCCESS)  
+#           terminate : None  
+# * Logic: This class drives the bot to its final docking location  
+#          using PID control and returns SUCCESS when aligned.  
+# * Example Call: dock_bot = dock("Dock", main_node, 0)
 
 class dock(Behaviour):
     def __init__(self, name,main_node,botid):
@@ -786,8 +984,27 @@ class dock(Behaviour):
 
 
 
+# Class Name: HolonomicPIDController
+# FUnction Name:__init__(), attach_callback(), attach_done_cb(), reset_tree(), tick_trees(), setup_all_trees(), 
+#               make_bt_for_bots(), assign_task_greedy(), pose_bot_cb(), pose_crate_cb(), collision_avoidance(), 
+#               publish_wheel_velocities()
+# * Input: Multiple ROS topics, MQTT messages, service requests  
+# * OutPut: Bot wheel commands, gripper commands, BT status updates  
+# * Logic: This is the main system controller node.  
+#          It manages multi-bot coordination using PID control,  
+#          Behaviour Trees, greedy task allocation, MQTT communication,  
+#          and automatic collision avoidance.  
+# * Example Call: node = HolonomicPIDController()
 
 class HolonomicPIDController(Node):
+
+    # Function Name: __init__
+    # * Input: self
+    # * Output: None
+    # * Logic: Initializes ROS2 node, MQTT, PID parameters, services, publishers,
+    #          subscribers, behaviour trees, task allocation variables,
+    #          kinematics matrix, and timers for collision avoidance and BT ticking.
+    # * Example Call: node = HolonomicPIDController()
     def __init__(self):
         super().__init__('holonomic_pid_controller')  # initializing ros node
         self.get_logger().info('HolonomicPIDController is created')
@@ -803,6 +1020,13 @@ class HolonomicPIDController(Node):
             "glacio": None
         }
 
+        # Function Name: on_connect, on_message, on_disconnect
+        # * Input: MQTT client callbacks (client, userdata, flags/msg, rc)
+        # * Output: None
+        # * Logic: on_connect subscribes to IR topics and sends LED_ON;
+        #          on_message updates IR sensor states;
+        #          on_disconnect logs broker disconnection.
+        # * Example Call: Auto-triggered by MQTT client
 
         def on_connect(client, userdata, flags, rc):
             if rc == 0:
@@ -928,7 +1152,12 @@ class HolonomicPIDController(Node):
             4: "esp/glacio_elec",
         }
 
-
+    # Function Name: attach_callback, attach_done_cb
+    # * Input: request, response (service); future (async result)
+    # * Output: Service response (success flag)
+    # * Logic: attach_callback publishes gripper ON/OFF via MQTT and returns success;
+    #          attach_done_cb logs service result or error.
+    # * Example Call: Called automatically by ROS2 service
     def attach_callback(self, request, response):
         topic = self.BOT_ELEC_TOPIC[request.bot_id]
         payload = "TRUE" if request.data else "FALSE"
@@ -948,6 +1177,13 @@ class HolonomicPIDController(Node):
         except Exception as e:
             self.get_logger().error(f"Service failed: {e}")
 
+    # Function Name: reset_tree, tick_trees
+    # * Input: botid (for reset), None (for ticking)    
+    # * Output: None
+    # * Logic: reset_tree restarts a bot’s Behaviour Tree;
+    #          tick_trees ticks all trees, resets if needed,
+    #          removes completed trees, and stops timer when all finish.
+    # * Example Call: self.tick_trees()
 
     def reset_tree(self, botid):
         tree = self.trees[botid]
@@ -977,6 +1213,13 @@ class HolonomicPIDController(Node):
         if not self.trees:
             self.get_logger().info("All trees completed. Stopping BT timer.")
             self.timer_bt.cancel()
+
+    # Function Name: setup_all_trees, make_bt_for_bots
+    # * Input: botid (for tree creation)
+    # * Output: BehaviourTree object (per bot)
+    # * Logic: Creates a Behaviour Tree for each bot with sequence:
+    #          check → navigate → pick → drop → recheck → collision avoid → dock.
+    # * Example Call: self.setup_all_trees()
 
     def setup_all_trees(self):
         bot_ids = [0,2,4]
@@ -1018,6 +1261,11 @@ class HolonomicPIDController(Node):
         else:
             return "blue"
 
+    # Function Name: pose_bot_cb
+    # * Input: msg (bot poses)
+    # * Output: None
+    # * Logic: Updates bot pose dictionaries by ID and refreshes combined bot lists.
+    # * Example Call: Auto-called by subscriber
     def pose_bot_cb(self, msg):
         for self.current_pose_bot in msg.poses:
 
@@ -1042,6 +1290,11 @@ class HolonomicPIDController(Node):
         self.all_bots_dict = self.crystal_dict | self.frostbite_dict | self.glacio_dict
 
 
+    # Function Name: assign_task_greedy
+    # * Input: None
+    # * Output: None
+    # * Logic: Greedily assigns nearest crate to each bot and updates mappings.
+    # * Example Call: self.assign_task_greedy()
 
     def assign_task_greedy(self):
         if self.tasks_assigned:
@@ -1093,6 +1346,11 @@ class HolonomicPIDController(Node):
         if hasattr(self, 'timer'):
             self.timer.cancel()
 
+    # Function Name: pose_crate_cb
+    # * Input: msg (crate poses)
+    # * Output: None
+    # * Logic: Sorts crates by color and updates crate dictionaries.
+    # * Example Call: Auto-called by subscriber
     def pose_crate_cb(self, msg):
         for self.current_pose_crates in msg.poses:
             color = self.crate_color(self.current_pose_crates.id)
@@ -1112,6 +1370,12 @@ class HolonomicPIDController(Node):
         self.all_crates = self.red_crates + self.green_crates + self.blue_crates
         self.all_crates_dict = self.red_dict | self.green_dict | self.blue_dict
 
+    # Function Name: point_to_segment_dist, collision_avoidance
+    # * Input: (px, py, x1, y1, x2, y2) for distance calc; uses bot positions & targets for collision check
+    # * Output: Distance (float) from point to segment; updates bot_safe_check (True/False)
+    # * Logic: Computes shortest distance from a bot to another bot’s path; if within safety limit,
+    #          stops the bot that is farther from its target to avoid collision.
+    # * Example Call: self.collision_avoidance()
     def point_to_segment_dist(self,px, py, x1, y1, x2, y2):
         dx = x2 - x1
         dy = y2 - y1
@@ -1161,8 +1425,12 @@ class HolonomicPIDController(Node):
                         self.bot_safe_check[botid] = False
                     break
 
-
-
+# Function Name: publish_wheel_velocities
+# * Input: wheel_vel (list → [id, m1, m2, m3, base, elbow])
+# * Output: None
+# * Logic: Creates BotCmd message, applies safety check (stops wheels if unsafe),
+#          publishes command to ROS2 topic and sends same data via MQTT.
+# * Example Call: self.publish_wheel_velocities([0, v1, v2, v3, 180.0, 180.0])
     def publish_wheel_velocities(self, wheel_vel):
             
         msg = BotCmdArray()
@@ -1200,6 +1468,12 @@ class HolonomicPIDController(Node):
         self.mqtt_client.publish("esp/bot_cmd", json.dumps(data))
 
 
+# Function Name: main
+# * Input: args (optional ROS2 arguments)
+# * Output: None
+# * Logic: Initializes ROS2, creates HolonomicPIDController node,
+#          spins the node to keep it running, then properly shuts down.
+# * Example Call: main()
 def main(args=None):
     rclpy.init(args=args)
     controller = HolonomicPIDController()
