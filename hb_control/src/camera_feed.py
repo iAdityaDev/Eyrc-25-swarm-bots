@@ -13,7 +13,7 @@ class CameraTester(Node):
     def __init__(self):
         super().__init__('camera_tester_node')
         
-        self.CAMERA_ID = '/video2'
+        self.CAMERA_ID = '/video0'
         self.bridge = CvBridge()
         
         # Create publisher for /image_raw topic
