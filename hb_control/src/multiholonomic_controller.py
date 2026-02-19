@@ -322,6 +322,9 @@ class pickup_crate(Behaviour):
         self.tick_count_2 = 0 
         self.max_ticks = 50
         self.max_ticks_2 = 15
+        self.max_ticks_3 = 50
+        self.max_ticks_4 = 50
+        self.max_ticks_5 = 50
         self.bool = True
         self.cratedropped = 0
 
@@ -330,8 +333,11 @@ class pickup_crate(Behaviour):
 
     def initialise(self):
         self.bool = True
-        self.tick_count = 0 
+        self.tick_count = 0
         self.tick_count_2 = 0 
+        self.tick_count_3 = 0 
+        self.tick_count_4 = 0 
+        self.tick_count_5 = 0 
         self.logger.debug(f"pickup::initialise {self.name}")
     
     def update(self):
@@ -354,13 +360,30 @@ class pickup_crate(Behaviour):
             return py_trees.common.Status.RUNNING
 
 
+
+        if self.botid == 0 and self.cratedropped ==0:
+            self.tick_count_3 += 1
+            if self.tick_count_3 < self.max_ticks_3:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,180.0])
+                return Status.RUNNING
+            self.tick_count_4 += 1
+            if self.tick_count_4 < self.max_ticks_4:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,90.0])
+                return Status.RUNNING
+            
+            self.tick_count_5 += 1
+            if self.tick_count_5 < self.max_ticks_5:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,90.0])
+                return Status.RUNNING
+
+
+
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
             if self.botid == 0 and self.cratedropped == 0:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,65.0])
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,65.0])
             else:
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
-            print(' i am hereeeeeeeeee')
             return py_trees.common.Status.RUNNING
         return Status.SUCCESS
 
@@ -1362,11 +1385,11 @@ class HolonomicPIDController(Node):
 
 ###########################################
         self.bot_to_crate = {
-            0 : 11,
+            0 : 8,
             2 : 16,
             4 : 12,
         }
-        self.unassigned_crates = [8,13,30]
+        self.unassigned_crates = [11,13,30]
 
 ###############################################
 
