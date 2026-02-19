@@ -245,6 +245,8 @@ class navigate_to_assigned_crate(Behaviour):
             pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
             s_linalg = np.linalg.solve(self.main_node.A, pose)
             wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],165.0,180.0]
+            if self.cratedroppped == 1 and self.botid ==0:
+                wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,90.0]
             print(wheel_velocities)
       
             self.main_node.publish_wheel_velocities(wheel_velocities)
@@ -321,7 +323,7 @@ class pickup_crate(Behaviour):
         self.max_ticks = 50
         self.max_ticks_2 = 15
         self.bool = True
-
+        self.cratedropped = 0
 
     def setup(self):
         self.logger.debug(f"pickup::setup {self.name}")
@@ -354,7 +356,10 @@ class pickup_crate(Behaviour):
 
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
-            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
+            if self.botid == 0 and self.cratedropped == 0:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,65.0])
+            else:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
             print(' i am hereeeeeeeeee')
             return py_trees.common.Status.RUNNING
         return Status.SUCCESS
@@ -421,14 +426,24 @@ class navigate_to_dropzone(Behaviour):
         if self.botid == 0 :   
             if self.cratedropped == 0:    
                 cx,cy = self.main_node.red_D1
-                cx = 1070.0
-                cy = 1215.0
-                cb_yaw = -1.55
+
+                if 12 not in self.main_node.crates_dropped:
+                    return Status.RUNNING
+                if 30 not in self.main_node.crates_dropped:
+                    return Status.RUNNING
+                _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
+                _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
+                cx = (cx1+cx2)/2
+                cy = (cy1+cy2)/2+200.0
+                cb_yaw = -3.13
+
             elif self.cratedropped == 1:    
                 cx,cy = self.main_node.red_D1
-                cx = 1070.0
-                cy = 1215.0
-                cb_yaw = -1.55
+                _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
+                _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
+                cx = (cx1+cx2)/2
+                cy = (cy1+cy2)/2+200.0
+                cb_yaw = 0.2
 
         if self.botid == 4:
             if self.cratedropped == 0:    
@@ -461,6 +476,7 @@ class navigate_to_dropzone(Behaviour):
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
+        self.cid,_,_,_ = self.main_node.all_crates_dict[self.main_node.bot_to_crate[self.botid]]
         self.main_node.bot_target[self.botid] = (cx,cy)
         now = self.main_node.get_clock().now()
         dt = (now.nanoseconds - self.last_time)/1e9
@@ -499,8 +515,8 @@ class navigate_to_dropzone(Behaviour):
             s_linalg = np.linalg.solve(self.main_node.A, pose)
 
             wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
-        
-
+            if self.cratedropped == 0 and self.botid == 0:
+                wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,60.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             
         if self.botid == 2:
@@ -519,7 +535,7 @@ class navigate_to_dropzone(Behaviour):
             if self.rotation == False:
                 if self.dist_error<5:
                     if self.cratedropped == 0:
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,160.0,180.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,60.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         self.rotation = True
                     if self.cratedropped == 1:
@@ -542,18 +558,18 @@ class navigate_to_dropzone(Behaviour):
         if self.rotation == True:
 
             if self.botid == 0:
-                wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,160.0,180.0]
+                wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,180.0,65.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if self.cratedropped == 0:
-                    if -1.55 >= byaw >= -1.58:  
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                    if -3.14 <= byaw <= -3.12:  
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,85.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
-                    if self.cratedropped == 1:
-                        if -1.55 >= byaw >= -1.58:  
-                            wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                            self.main_node.publish_wheel_velocities(wheel_velocities)
-                            return Status.SUCCESS    
+                if self.cratedropped == 1:
+                    if 0.00 <= byaw <= 0.4:  
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,85.0]
+                        self.main_node.publish_wheel_velocities(wheel_velocities)
+                        return Status.SUCCESS    
                 
             if self.botid == 2:
                 wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,160.0,180.0]
@@ -567,7 +583,7 @@ class navigate_to_dropzone(Behaviour):
                         return Status.SUCCESS
                 if self.cratedropped == 1:
                     if 0.01 <= byaw <= 0.1:  
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
                     
@@ -581,7 +597,7 @@ class navigate_to_dropzone(Behaviour):
                         return Status.SUCCESS
                 if self.cratedropped == 1:
                     if 0.01 <= byaw <= 0.1:  
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS 
                 
@@ -590,6 +606,7 @@ class navigate_to_dropzone(Behaviour):
     def terminate(self, new_status):
         self.rotation = False
         self.cratedropped = 1
+        self.main_node.crates_dropped.append(self.cid)
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 # Class Name: drop_crate
@@ -647,8 +664,11 @@ class drop_crate(Behaviour):
         self.tick_count += 1
 
         if self.tick_count < self.max_ticks:
-
-            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+            
+            if self.botid == 0 and self.cratedropped == 0:
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,90.0])
+            else :
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
 
 
             return py_trees.common.Status.RUNNING
@@ -667,8 +687,10 @@ class drop_crate(Behaviour):
         #     self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
         #     return py_trees.common.Status.RUNNING
 
-
-        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+        if self.cratedropped == 0 and self.botid == 0:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+        else:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
 
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
@@ -677,9 +699,10 @@ class drop_crate(Behaviour):
 
     def terminate(self, new_status):
 
-
-        self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,180.0])
-
+        if self.cratedropped == 0 and self.botid == 0:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,180.0])
+        else:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,90.0])
         self.cratedropped = 1
         self.logger.debug(f"pickup::terminate {self.name} to {new_status}")
 
@@ -971,6 +994,334 @@ class dock(Behaviour):
 
     def terminate(self, new_status):
         self.cratedropped = 1
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
+        print(self.main_node.crates_dropped)
         self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
 
 
@@ -1063,11 +1414,18 @@ class HolonomicPIDController(Node):
         #     'y': {'kp': 8.0, 'ki': 0.0, 'kd': 4.0, 'max_out': self.max_vel},
         #     'theta': {'kp': 10.0, 'ki': 0.00, 'kd': 3.0, 'max_out': self.max_vel * 2}
         # }
+
+        # good params
         self.pid_values = {
             'x': {'kp': 6.0, 'ki': 0.00, 'kd': 1.0, 'max_out': self.max_vel},
             'y': {'kp': 6.0, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel},
             'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
         }
+        # self.pid_values = {
+        #     'x': {'kp': 7.0, 'ki': 0.00, 'kd': 2.5, 'max_out': self.max_vel},
+        #     'y': {'kp': 7.0, 'ki': 0.00, 'kd': 2.5, 'max_out': self.max_vel},
+        #     'theta': {'kp': 22.50, 'ki': 0.00, 'kd': 0.0, 'max_out': self.max_vel * 2}
+        # }
 
 
         self.attach_srv = self.create_client(Attach, 'attach')
@@ -1114,6 +1472,8 @@ class HolonomicPIDController(Node):
         self.alpha1 = math.radians(30)
         self.alpha2 = math.radians(150)
         self.alpha3 = math.radians(270)
+
+        self.crates_dropped = []
         log_tree.level = log_tree.Level.DEBUG
 
         self.bot_target = {
