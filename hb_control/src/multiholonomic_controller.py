@@ -668,55 +668,53 @@ class navigate_to_dropzone(Behaviour):
                 # _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
                 # cx = (cx1+cx2)/2
                 # cy = (cy1+cy2)/2+200.0
-                cx = 1180.0 -20.0
-                cy = 1070.0 - 20.0
-                cb_yaw = 0.0
+                cx = 1440.0 
+                cy = 2060.0
+                cb_yaw = -1.6
 
             elif self.cratedropped == 1:    
                 cx,cy = self.main_node.blue_D3
-                # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
-                # _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
-                # cx = (cx1+cx2)/2
-                # cy = (cy1+cy2)/2+200.0
-                cx = 1660.0
-                cy = 1878.0
+                _,cx1,cy1,_ = self.main_node.all_crates_dict[23]
+                _,cx2,cy2,_ = self.main_node.all_crates_dict[44]
+                cx = (cx1+cx2)/2
+                cy = (cy1+cy2)/2-200.0
                 cb_yaw = 0.0
 
         if self.botid == 4:
             if self.cratedropped == 0:    
                 cx,cy = self.main_node.red_D1
-                cx = 1250.0
-                cy = 1355.0
-                cb_yaw = 3.0
+                cx = 1010.0
+                cy = 1223.0
+                cb_yaw = -1.5
             elif self.cratedropped == 1:    
                 cx,cy = self.main_node.red_D1
                 _,cx1,cy1,_ = self.main_node.all_crates_dict[9]
                 _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
                 cx = (cx1+cx2)/2
-                cy = (cy1+cy2)/2+225.0
+                cy = (cy1+cy2)/2-225.0
                 # cx = 1667.0
                 # cy = 1890.0
-                cb_yaw = 3.1
+                cb_yaw = 0.0
 
         if self.botid == 2:
             if self.cratedropped == 0:
-                cx = 770.0
-                cy = 1880.0 
-                cb_yaw = 0.0
+                cx = 1815.0
+                cy = 2040.0
+                cb_yaw = 1.70
 
             elif self.cratedropped == 1 :
                 cx,cy = self.main_node.green_D2
 
                 # if 23 not in self.main_node.crates_dropped:
                 #     return Status.RUNNING
-                cx = 1576.0
-                cy = 1900.0
+                cx = 1426.0
+                cy = 1180.0
       
                 # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
                 # _,cx2,cy2,_ = self.main_node.all_crates_dict[21]
                 # cx = (cx1+cx2)/2
                 # cy = (cy1+cy2)/2-145.0
-                cb_yaw = 0.0
+                cb_yaw = 1.63
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -805,7 +803,7 @@ class navigate_to_dropzone(Behaviour):
                 wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,150.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if self.cratedropped == 0:
-                    if 0.01 <= byaw <= 0.09:  
+                    if -1.5 >= byaw >= -1.7:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
@@ -821,12 +819,12 @@ class navigate_to_dropzone(Behaviour):
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
                 if self.cratedropped == 0:
-                    if 0.01 <= byaw <= 0.1:  
+                    if 0.6 <= byaw <= 1.8:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    if 0.01 <= byaw <= 0.1:  
+                    if 1.6 <= byaw <= 1.66:
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
@@ -836,14 +834,14 @@ class navigate_to_dropzone(Behaviour):
                 if self.cratedropped == 0:
                     wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
-                    if  3.09 <= byaw <= 3.1:  
+                    if  -1.45 >= byaw >= -1.55:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
                     wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,170.0,65.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
-                    if 3.0 <= byaw <= 3.11:  
+                    if 0.01 <= byaw <= 0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS 
@@ -1125,13 +1123,13 @@ class collisionAvoidance(Behaviour):
             return Status.RUNNING
         if self.botid == 0:
             cx,cy = (1770.25,800.0)
-            # return Status.SUCCESS
+            return Status.SUCCESS
         if self.botid == 2:
             cx,cy = (2300.25,1560.0)
-            # return Status.SUCCESS
+            return Status.SUCCESS
         if self.botid == 4:
             cx,cy = (760.25,1588.0)
-            # return Status.SUCCESS
+            return Status.SUCCESS
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -1600,7 +1598,7 @@ class HolonomicPIDController(Node):
             check_assign,
             navigate,
             pick_crate,
-            collision2,
+            # collision2,
             navigate_drop,
             drope_crate,
             check_other,
@@ -1690,11 +1688,11 @@ class HolonomicPIDController(Node):
 
 ###########################################
         self.bot_to_crate = {
-            0 : 30,
-            2 : 43,
+            0 : 44,
+            2 : 23,
             4 : 9,
         }
-        self.unassigned_crates = [23,32,21]
+        self.unassigned_crates = [32,30,21]
 
 ###############################################
 
