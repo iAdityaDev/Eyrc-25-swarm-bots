@@ -50,7 +50,7 @@ Servo elbow_servo;
 const int ELEC_PIN = 23;
 const int PWM_CHANNEL = 0;
 const int PWM_FREQ = 1000;    // 1 kHz
-const int PWM_RES = 8;        // 8-bit resolution -> values 0..255
+const int PWM_RES = 8;        // 8-bit reution -> values 0..255
 
 #define NEUTRAL 1500
 #define STOP_MIN 1446

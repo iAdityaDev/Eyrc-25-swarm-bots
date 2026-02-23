@@ -216,10 +216,6 @@ class navigate_to_assigned_crate(Behaviour):
             target_yaw = math.atan2(self.error_y,self.error_x)
             error_yaw = target_yaw - byaw + math.pi/2
 
-            # error_yaw = cyaw-byaw
-            # correction = -1.03 * cyaw + 0.8
-            # correction = 0 
-            # error_yaw += correction
             self.dist_error = math.sqrt(self.error_x**2 + self.error_y**2)
             
 
@@ -245,46 +241,14 @@ class navigate_to_assigned_crate(Behaviour):
             pose = np.array([-pid_x_robot,pid_y_robot,pid_yaw])
             s_linalg = np.linalg.solve(self.main_node.A, pose)
             wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],165.0,180.0]
-            # if self.cratedroppped == 1 and self.botid ==4:
-            #     wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,90.0]
+
             print(wheel_velocities)
       
             self.main_node.publish_wheel_velocities(wheel_velocities)
         self.ir_value = self.main_node.ir_state[self.botname]
    
 
-        # if self.cratedroppped == 1:
-        thresh_dis = 215
-        if self.botid == 2:
-            if self.cratedroppped == 0: 
-                thresh_dis = 180
-            if self.cratedroppped == 1:
-                thresh_dis = 165
-        if self.botid == 4:
-            if self.cratedroppped == 1:
-                thresh_dis = 195
-        if self.botid == 0:
-            if self.cratedroppped == 0:
-                thresh_dis = 205
-            if self.cratedroppped == 1:
-                thresh_dis = 180
-        if self.botid == 4:
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
-            print(self.cratedroppped)
+        thresh_dis = 195
 
         if self.dist_error<thresh_dis:
             if self.ir_value == 0:
@@ -298,17 +262,6 @@ class navigate_to_assigned_crate(Behaviour):
             self.tick_count += 1 
             self.rotation = True
             wheel_velocities = [self.botid,-150.0,-150.0,-150.0,165.0,180.0]
-            if self.botid == 4:
-                if self.cratedroppped == 1:
-                    wheel_velocities = [self.botid,-150.0,-150.0,-150.0,165.0,180.0]
-            if self.botid == 2: 
-                if self.cratedroppped ==0:
-                    wheel_velocities = [self.botid,800.0,800.0,800.0,165.0,180.0]
-                if self.cratedroppped ==1:
-                    wheel_velocities = [self.botid,800.0,800.0,800.0,165.0,180.0]
-
-            if self.botid == 0:
-                    wheel_velocities = [self.botid,-150.0,-150.0,-150.0,155.0,180.0]
 
             self.main_node.publish_wheel_velocities(wheel_velocities)
             if self.tick_count < self.max_ticks:
@@ -361,19 +314,7 @@ class pickup_crate(Behaviour):
         self.max_ticks_3 = 30
         self.max_ticks_4 = 30
         self.max_ticks_5 = 30
-        self.max_ticks_6 = 30
-        self.max_ticks_7 = 30
-        self.max_ticks_8 = 30
-        self.max_ticks_9 = 30
-        self.max_ticks_10 = 30
-        self.max_ticks_11 = 30
-        self.max_ticks_12 = 30
-        self.max_ticks_13 = 30
-        self.max_ticks_14 = 30
-        self.max_ticks_15 = 30
-        self.max_ticks_16 = 30
-        self.max_ticks_17 = 30
-        self.max_ticks_18 = 30
+
         self.bool = True
         self.cratedropped = 0
 
@@ -387,17 +328,7 @@ class pickup_crate(Behaviour):
         self.tick_count_3 = 0 
         self.tick_count_4 = 0 
         self.tick_count_5 = 0 
-        self.tick_count_6 = 0 
-        self.tick_count_7 = 0 
-        self.tick_count_8 = 0 
-        self.tick_count_9 = 0 
-        self.tick_count_10 = 0 
-        self.tick_count_11 = 0 
-        self.tick_count_12 = 0 
-        self.tick_count_13 = 0 
-        self.tick_count_14 = 0 
-        self.tick_count_15 = 0 
-        self.tick_count_16 = 0 
+      
         self.logger.debug(f"pickup::initialise {self.name}")
     
     def update(self):
@@ -422,62 +353,20 @@ class pickup_crate(Behaviour):
 
 
         if self.botid == 4 and self.cratedropped == 1:
+
             self.tick_count_3 += 1
             if self.tick_count_3 < self.max_ticks_3:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
-                return Status.RUNNING
-            
-            self.tick_count_13 += 1
-            if self.tick_count_13 < self.max_ticks_13:
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
                 return Status.RUNNING
-            self.tick_count_14 += 1
-            if self.tick_count_14 < self.max_ticks_14:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,180.0])
-                return Status.RUNNING
-            self.tick_count_15 += 1
-            if self.tick_count_15 < self.max_ticks_15:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,90.0])
-                return Status.RUNNING
-            
             self.tick_count_4 += 1
             if self.tick_count_4 < self.max_ticks_4:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,40.0])
+                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,180.0])
                 return Status.RUNNING
+
             self.tick_count_5 += 1
             if self.tick_count_5 < self.max_ticks_5:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,150.0,0.0])
-                return Status.RUNNING
-            self.tick_count_6 += 1
-            if self.tick_count_6 < self.max_ticks_6:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,160.0,0.0])
-                return Status.RUNNING
-            self.tick_count_7 += 1
-            if self.tick_count_7 < self.max_ticks_7:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,0.0])
-                return Status.RUNNING
-            self.tick_count_8 += 1
-            if self.tick_count_8 < self.max_ticks_8:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,10.0])
-                return Status.RUNNING
-            self.tick_count_9 += 1
-            if self.tick_count_9 < self.max_ticks_9:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,20.0])
-                return Status.RUNNING
-            self.tick_count_10 += 1
-            if self.tick_count_10 < self.max_ticks_10:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,30.0])
-                return Status.RUNNING
-            self.tick_count_11 += 1
-            if self.tick_count_11 < self.max_ticks_11:
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,40.0])
-                return Status.RUNNING
-            self.tick_count_12 += 1
-            if self.tick_count_12 < self.max_ticks_12:
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,50.0])
                 return Status.RUNNING
-
-
 
         self.tick_count_2 += 1
         if self.tick_count_2 < self.max_ticks_2:
@@ -485,8 +374,7 @@ class pickup_crate(Behaviour):
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,65.0])
             else:
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
-        # if self.tick_count_2 < self.max_ticks_2:
-        #     self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,170.0,180.0])
+
             return py_trees.common.Status.RUNNING
         return Status.SUCCESS
 
@@ -519,112 +407,6 @@ class pickup_crate(Behaviour):
 # * Example Call: drop_nav = navigate_to_dropzone("NavToDrop", main_node, 0)
 
 
-class collisionAvoidance2(Behaviour):
-    def __init__(self, name,main_node,botid):
-        super(collisionAvoidance2,self).__init__(name)
-        self.main_node = main_node
-        self.botid = botid
-        self.last_time = 0.0
-        self.max_vel = 2.0
-        self.tick_count = 0 
-        self.max_ticks = 15
-        self.cratedropped = 0 
-        self.pid_params = self.main_node.pid_values
-
-        self.pid_x = PID(**self.pid_params['x'])
-        self.pid_y = PID(**self.pid_params['y'])
-        self.pid_yaw = PID(**self.pid_params['theta'])
-
-    def setup(self):
-        self.logger.debug(f"navigate to crate::setup {self.name}")
-
-    def initialise(self):
-        self.tick_count = 0 
-        self.logger.debug(f"navigate to crate::initialise {self.name}")
-
-    def update(self):
-        if self.main_node.bot_to_crate is None:
-            return Status.RUNNING
-        if self.botid == 0:
-            cx,cy = (1800.25,1482.0)
-            return Status.SUCCESS
-        if self.botid == 2:
-            if self.cratedropped == 0:
-                cx,cy = (1580.25,1480.0)
-            else:
-                return Status.SUCCESS
-        if self.botid == 4:
-            cx,cy = (760.25,1588.0)
-            return Status.SUCCESS
-
-        self.logger.debug(f"navigate to crate::update {self.name}")
-        _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
-        self.main_node.bot_target[self.botid] = (cx,cy)
-        now = self.main_node.get_clock().now()
-        dt = (now.nanoseconds - self.last_time)/1e9
-        if dt <= 0:
-            return
-        self.last_time = now.nanoseconds
-
-        error_x = cx-bx
-        error_y = cy-by
-        target_yaw = math.atan2(error_y,error_x)
-        error_yaw = target_yaw - byaw + math.pi/2
-
-        self.dist_error = math.sqrt(error_x**2 + error_y**2)
-
-        while error_yaw > math.pi:
-            error_yaw -= 2 * math.pi    
-        while error_yaw < -math.pi:
-            error_yaw += 2 * math.pi
-        # print(error_x,error_y,error_yaw)
-
-        pid_x = self.pid_x.compute(error_x,dt)
-        pid_y = self.pid_y.compute(error_y,dt)
-        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
-
-        cos_yaw = math.cos(-byaw)
-        sin_yaw = math.sin(-byaw)
-        
-        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
-        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
-
-
-        # pose = np.array([pid_x,pid_y,pid_yaw])
-        pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
-        s_linalg = np.linalg.solve(self.main_node.A, pose)
-        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],155.0,180.0]
-        if self.botid == 4 :
-            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,90.0]
-
-        if self.botid == 2:
-            if self.dist_error<230:
-                # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-                # self.main_node.publish_wheel_velocities(wheel_velocities)
-
-                return Status.SUCCESS 
-        # if self.botid == 0:
-        #     if self.dist_error<250:
-        #         # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
-        #         # self.main_node.publish_wheel_velocities(wheel_velocities)
-
-        #         return Status.SUCCESS 
-        # if self.botid == 4:
-        #     if self.dist_error<50:
-        #         # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
-        #         # self.main_node.publish_wheel_velocities(wheel_velocities)
-
-        #         return Status.SUCCESS 
-
-        self.main_node.publish_wheel_velocities(wheel_velocities)
-        return Status.RUNNING
-
-    def terminate(self, new_status):
-        self.cratedropped = 1
-        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
-
-
-
 class navigate_to_dropzone(Behaviour):
     def __init__(self, name,main_node,botid):
         super(navigate_to_dropzone,self).__init__(name)
@@ -655,68 +437,31 @@ class navigate_to_dropzone(Behaviour):
         if self.main_node.all_crates_dict is None:
             return Status.RUNNING
 
-        
-        if self.botid == 0 :   
-            if self.cratedropped == 0:    
-                cx,cy = self.main_node.red_D1
+        self.crateid = self.main_node.bot_to_crate[self.botid]
+        self.cratecolor = self.main_node.crate_color_dict[self.crateid]
 
-                # if 12 not in self.main_node.crates_dropped:
-                #     return Status.RUNNING
-                # if 30 not in self.main_node.crates_dropped:
-                #     return Status.RUNNING
-                # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
-                # _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
-                # cx = (cx1+cx2)/2
-                # cy = (cy1+cy2)/2+200.0
-                cx = 1180.0 -20.0
-                cy = 1070.0 - 20.0
-                cb_yaw = 0.0
+        self.offset_dist_x = 150.0
+        self.offset_dist_y = 150.0
 
-            elif self.cratedropped == 1:    
-                cx,cy = self.main_node.blue_D3
-                # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
-                # _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
-                # cx = (cx1+cx2)/2
-                # cy = (cy1+cy2)/2+200.0
-                cx = 1660.0
-                cy = 1878.0
-                cb_yaw = 0.0
+        if self.cratecolor == 'red':
+            cx,cy = self.main_node.red_D1
+            self.cratedropped += 1
+            cb_yaw = 3.0
+        if self.cratecolor == 'blue':
+            cx,cy = self.main_node.blue_D2
+            self.cratedropped += 1
+            cb_yaw = 0.0 
+        if self.cratecolor == 'green':
+            cx,cy = self.main_node.green_D3
+            self.cratedropped += 1
+            cb_yaw = 0.0
 
-        if self.botid == 4:
-            if self.cratedropped == 0:    
-                cx,cy = self.main_node.red_D1
-                cx = 1250.0
-                cy = 1355.0
-                cb_yaw = 3.0
-            elif self.cratedropped == 1:    
-                cx,cy = self.main_node.red_D1
-                _,cx1,cy1,_ = self.main_node.all_crates_dict[9]
-                _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
-                cx = (cx1+cx2)/2
-                cy = (cy1+cy2)/2+225.0
-                # cx = 1667.0
-                # cy = 1890.0
-                cb_yaw = 3.1
-
-        if self.botid == 2:
-            if self.cratedropped == 0:
-                cx = 770.0
-                cy = 1880.0 
-                cb_yaw = 0.0
-
-            elif self.cratedropped == 1 :
-                cx,cy = self.main_node.green_D2
-
-                # if 23 not in self.main_node.crates_dropped:
-                #     return Status.RUNNING
-                cx = 1576.0
-                cy = 1900.0
-      
-                # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
-                # _,cx2,cy2,_ = self.main_node.all_crates_dict[21]
-                # cx = (cx1+cx2)/2
-                # cy = (cy1+cy2)/2-145.0
-                cb_yaw = 0.0
+        if self.cratedropped == 1: 
+            cx = cx-150
+            cb_yaw = 0.0
+        if self.cratecolor == 2:
+            cy = cy - 150.0
+            cb_yaw = 0.0 
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -759,8 +504,8 @@ class navigate_to_dropzone(Behaviour):
             s_linalg = np.linalg.solve(self.main_node.A, pose)
 
             wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],155.0,180.0]
-            if self.cratedropped == 1 and self.botid == 4:
-                wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,65.0]
+            # if self.cratedropped == 1 and self.botid == 4:
+            #     wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,65.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             
         if self.botid == 2:
@@ -795,7 +540,7 @@ class navigate_to_dropzone(Behaviour):
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         self.rotation = True
                     if self.cratedropped == 1:                        
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,70.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         self.rotation = True
 
@@ -805,12 +550,12 @@ class navigate_to_dropzone(Behaviour):
                 wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,150.0,180.0]
                 self.main_node.publish_wheel_velocities(wheel_velocities)
                 if self.cratedropped == 0:
-                    if 0.01 <= byaw <= 0.09:  
+                    if cb_yaw <= byaw <= cb_yaw-0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    if 0.01 <= byaw <= 0.1:  
+                    if cb_yaw <= byaw <= cb_yaw-0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS    
@@ -821,12 +566,12 @@ class navigate_to_dropzone(Behaviour):
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
                 if self.cratedropped == 0:
-                    if 0.01 <= byaw <= 0.1:  
+                    if cb_yaw <= byaw <= cb_yaw-0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    if 0.01 <= byaw <= 0.1:  
+                    if cb_yaw <= byaw <= cb_yaw-0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS  
@@ -836,14 +581,14 @@ class navigate_to_dropzone(Behaviour):
                 if self.cratedropped == 0:
                     wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,160.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
-                    if  3.09 <= byaw <= 3.1:  
+                    if  cb_yaw <= byaw <= cb_yaw-0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
-                    wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,170.0,65.0]
+                    wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,170.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
-                    if 3.0 <= byaw <= 3.11:  
+                    if cb_yaw <= byaw <= cb_yaw-0.1:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS 
@@ -942,44 +687,16 @@ class drop_crate(Behaviour):
             # self.main_node.mqtt_client.publish(f"esp/{self.botname}_elec", "TRUE", qos=1)
             self.bool = False
 
-        # if self.tick_count < self.max_ticks:
-        #     self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
-        #     return py_trees.common.Status.RUNNING
+        if self.tick_count < self.max_ticks:
+            self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,180.0])
+            return py_trees.common.Status.RUNNING
 
         if self.botid == 4 and self.cratedropped == 1:
-            self.tick_count_3 += 1
-            if self.tick_count_3 < self.max_ticks_3 :
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,70.0])
-                print(' in the tick1')
-                print(' in the tick1')
-                print(' in the tick1')
-                print(' in the tick1')
-                print(' in the tick1')
-
-                return py_trees.common.Status.RUNNING
-
-
-            self.tick_count_4 += 1
-            if self.tick_count_4 < self.max_ticks_4 :
-                self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,80.0])   
-                print(' in the tick2')
-                print(' in the tick2')
-                print(' in the tick2')
-                print(' in the tick2')
-
-
-
-                return py_trees.common.Status.RUNNING
 
             self.tick_count_5 += 1
             if self.tick_count_5 < self.max_ticks_5 :
                 self.main_node.publish_wheel_velocities([self.botid,0.0, 0.0, 0.0,180.0,85.0])
-                print(' in the tick3')
-                print(' in the tick3')
-                print(' in the tick3')
-                print(' in the tick3')
-                print(' in the tick3')
-                print(' in the tick3')
+
                 return py_trees.common.Status.RUNNING
 
         if self.cratedropped == 4 and self.botid == 1:
@@ -1125,13 +842,13 @@ class collisionAvoidance(Behaviour):
             return Status.RUNNING
         if self.botid == 0:
             cx,cy = (1770.25,800.0)
-            # return Status.SUCCESS
+            return Status.SUCCESS
         if self.botid == 2:
             cx,cy = (2300.25,1560.0)
-            # return Status.SUCCESS
+            return Status.SUCCESS
         if self.botid == 4:
             cx,cy = (760.25,1588.0)
-            # return Status.SUCCESS
+            return Status.SUCCESS
 
         self.logger.debug(f"navigate to crate::update {self.name}")
         _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
@@ -1589,7 +1306,6 @@ class HolonomicPIDController(Node):
         check_assign = CheckAsssignments("CheckAssignments",self,botid=botid)
         navigate = navigate_to_assigned_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
         pick_crate = pickup_crate('pick',main_node=self,botid=botid)
-        collision2 = collisionAvoidance2('avoid2',main_node=self,botid=botid)
         navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
         drope_crate = drop_crate('drop',main_node=self,botid=botid)
         check_other = check_other_asssign('check_other_asssign',main_node=self,botid=botid)
@@ -1600,7 +1316,6 @@ class HolonomicPIDController(Node):
             check_assign,
             navigate,
             pick_crate,
-            collision2,
             navigate_drop,
             drope_crate,
             check_other,
@@ -1687,16 +1402,6 @@ class HolonomicPIDController(Node):
         all_crate_ids = {crate[0] for crate in self.all_crates}
         self.unassigned_crates = list(all_crate_ids - self.assigned_crates)
         self.bot_to_crate = {bot_id: crate_id for bot_id, crate_id in self.assignments}
-
-###########################################
-        self.bot_to_crate = {
-            0 : 30,
-            2 : 43,
-            4 : 9,
-        }
-        self.unassigned_crates = [23,32,21]
-
-###############################################
 
         self.tasks_assigned = True
         if hasattr(self, 'timer'):
