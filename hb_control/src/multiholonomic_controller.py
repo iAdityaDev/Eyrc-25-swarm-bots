@@ -158,6 +158,111 @@ class CheckAsssignments(Behaviour):
 #          When close enough and IR detects crate, it stops and returns SUCCESS.  
 # * Example Call: assisgned_to_navigate_vrate = navigate_to_assigned_crate("NavToCrate", main_node, 0)
 
+class collisionAvoidance2(Behaviour):
+    def __init__(self, name,main_node,botid):
+        super(collisionAvoidance2,self).__init__(name)
+        self.main_node = main_node
+        self.botid = botid
+        self.last_time = 0.0
+        self.max_vel = 2.0
+        self.tick_count = 0 
+        self.max_ticks = 15
+
+        self.pid_params = self.main_node.pid_values
+
+        self.pid_x = PID(**self.pid_params['x'])
+        self.pid_y = PID(**self.pid_params['y'])
+        self.pid_yaw = PID(**self.pid_params['theta'])
+        self.cratedropped = 0
+
+    def setup(self):
+        self.logger.debug(f"navigate to crate::setup {self.name}")
+
+    def initialise(self):
+        self.tick_count = 0 
+        self.logger.debug(f"navigate to crate::initialise {self.name}")
+
+    def update(self):
+        if self.main_node.bot_to_crate is None:
+            return Status.RUNNING
+        if self.botid == 0 and self.cratedropped == 0:
+            cx,cy = (1027.0,1297.0)
+            # return Status.SUCCESS 
+        if self.botid == 0 and self.cratedropped == 1:
+            return Status.SUCCESS
+        if self.botid == 2:
+            cx,cy = (2300.25,1560.0)
+            return Status.SUCCESS
+        if self.botid == 4:
+            cx,cy = (760.25,1588.0)
+            return Status.SUCCESS
+
+        self.logger.debug(f"navigate to crate::update {self.name}")
+        _,bx,by,byaw = self.main_node.all_bots_dict[self.botid]
+        self.main_node.bot_target[self.botid] = (cx,cy)
+        now = self.main_node.get_clock().now()
+        dt = (now.nanoseconds - self.last_time)/1e9
+        if dt <= 0:
+            return
+        self.last_time = now.nanoseconds
+
+        error_x = cx-bx
+        error_y = cy-by
+        target_yaw = math.atan2(error_y,error_x)
+        error_yaw = target_yaw - byaw + math.pi/2
+
+        self.dist_error = math.sqrt(error_x**2 + error_y**2)
+
+        while error_yaw > math.pi:
+            error_yaw -= 2 * math.pi    
+        while error_yaw < -math.pi:
+            error_yaw += 2 * math.pi
+        # print(error_x,error_y,error_yaw)
+
+        pid_x = self.pid_x.compute(error_x,dt)
+        pid_y = self.pid_y.compute(error_y,dt)
+        pid_yaw = self.pid_yaw.compute(error_yaw,dt)
+
+        cos_yaw = math.cos(-byaw)
+        sin_yaw = math.sin(-byaw)
+        
+        pid_x_robot = pid_x * cos_yaw - pid_y * sin_yaw
+        pid_y_robot = pid_x * sin_yaw + pid_y * cos_yaw
+
+
+        # pose = np.array([pid_x,pid_y,pid_yaw])
+        pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
+        s_linalg = np.linalg.solve(self.main_node.A, pose)
+        wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],140.0,180.0]
+        if self.botid == 4 :
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],180.0,90.0]
+
+        if self.botid == 2:
+            if self.dist_error<30:
+                # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                # self.main_node.publish_wheel_velocities(wheel_velocities)
+
+                return Status.SUCCESS 
+        if self.botid == 0:
+            if self.dist_error<250:
+                # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                # self.main_node.publish_wheel_velocities(wheel_velocities)
+
+                return Status.SUCCESS 
+        if self.botid == 4:
+            if self.dist_error<50:
+                # wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,90.0]
+                # self.main_node.publish_wheel_velocities(wheel_velocities)
+
+                return Status.SUCCESS 
+
+        self.main_node.publish_wheel_velocities(wheel_velocities)
+        return Status.RUNNING
+
+    def terminate(self, new_status):
+        self.cratedropped = 1
+        self.logger.debug(f"navigate::terminate {self.name} to {new_status}")
+
 class navigate_to_assigned_crate(Behaviour):
     def __init__(self, name,main_node,botid):
         super(navigate_to_assigned_crate,self).__init__(name)
@@ -257,19 +362,19 @@ class navigate_to_assigned_crate(Behaviour):
         thresh_dis = 215
         if self.botid == 2:
             if self.cratedroppped == 0: 
-                thresh_dis = 185
+                thresh_dis = 190
             if self.cratedroppped == 1:
-                thresh_dis = 160
+                thresh_dis = 195.0
         if self.botid == 4:
             if self.cratedroppped == 0:
-                thresh_dis = 202
+                thresh_dis = 207
             if self.cratedroppped == 1:
-                thresh_dis = 185
+                thresh_dis = 200
         if self.botid == 0:
             if self.cratedroppped == 0:
                 thresh_dis = 185.0
             if self.cratedroppped == 1:
-                thresh_dis = 180
+                thresh_dis = 195
         if self.botid == 4:
             print(self.cratedroppped)
             print(self.cratedroppped)
@@ -305,7 +410,7 @@ class navigate_to_assigned_crate(Behaviour):
                     wheel_velocities = [self.botid,-150.0,-150.0,-150.0,165.0,180.0]
             if self.botid == 2: 
                 if self.cratedroppped ==0:
-                    wheel_velocities = [self.botid,800.0,800.0,800.0,165.0,180.0]
+                    wheel_velocities = [self.botid,600.0,600.0,600.0,165.0,180.0]
                 if self.cratedroppped ==1:
                     wheel_velocities = [self.botid,800.0,800.0,800.0,165.0,180.0]
 
@@ -590,7 +695,7 @@ class navigate_to_dropzone(Behaviour):
 
         if self.botid == 2:
             if self.cratedropped == 0:
-                cx = 1643.0 -45.0
+                cx = 1643.0 + 30.0
                 cy = 1875.0 + 30.0
                 cb_yaw = 0.03
 
@@ -599,7 +704,7 @@ class navigate_to_dropzone(Behaviour):
 
                 # if 23 not in self.main_node.crates_dropped:
                 #     return Status.RUNNING
-                cx = 1385.0 
+                cx = 1385.0 + 10.0
                 cy = 1170.0
       
                 # _,cx1,cy1,_ = self.main_node.all_crates_dict[12]
@@ -681,7 +786,7 @@ class navigate_to_dropzone(Behaviour):
             if self.rotation == False:
                 if self.dist_error<8 :
                     if self.cratedropped == 0:
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,170.0,180.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,165.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         self.rotation = True
                     if self.cratedropped == 1:                        
@@ -730,7 +835,7 @@ class navigate_to_dropzone(Behaviour):
                     wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,165.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
                     if  -1.45 >= byaw >= -1.55:  
-                        wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
+                        wheel_velocities = [self.botid,0.0,0.0,0.0,175.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
                 if self.cratedropped == 1:
@@ -1481,6 +1586,7 @@ class HolonomicPIDController(Node):
         root = Sequence(f"MAIN_SEQUENCE_{botid}",memory=True)
 
         check_assign = CheckAsssignments("CheckAssignments",self,botid=botid)
+        avoid = collisionAvoidance2('avoidance',main_node=self,botid=botid)
         navigate = navigate_to_assigned_crate('navigate_to_assigned_crate',main_node=self,botid=botid)
         pick_crate = pickup_crate('pick',main_node=self,botid=botid)
         navigate_drop = navigate_to_dropzone('mav_drop',main_node=self,botid=botid)
@@ -1491,12 +1597,12 @@ class HolonomicPIDController(Node):
 
         root.add_children([
             check_assign,
+            avoid,  
             navigate,
             pick_crate,
-            # collision2,
             navigate_drop,
             drope_crate,
-            check_other,
+            check_other,    
             avoid_collision,
             docks,
         ])    
@@ -1635,8 +1741,8 @@ class HolonomicPIDController(Node):
         t = max(0.0, min(1.0, t))
 
         cx = x1 + t*dx
-    #     cy = y1 + t*dy
-    #     return math.hypot(px - cx, py - cy)
+        cy = y1 + t*dy
+        return math.hypot(px - cx, py - cy)
 
     # def collision_avoidance(self):
     #     for bid in self.bot_safe_check:
@@ -1695,7 +1801,7 @@ class HolonomicPIDController(Node):
                     continue
 
                 bot_to_bot_dist = math.hypot(ox - bx, oy - by)
-                if bot_to_bot_dist >= 120.0:
+                if bot_to_bot_dist >= 200.0:
                     continue  
 
                 other_target = self.bot_target.get(oid)
