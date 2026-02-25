@@ -364,17 +364,17 @@ class navigate_to_assigned_crate(Behaviour):
             if self.cratedroppped == 0: 
                 thresh_dis = 195.0
             if self.cratedroppped == 1:
-                thresh_dis = 190.0
+                thresh_dis = 185.0
         if self.botid == 4:
             if self.cratedroppped == 0:
                 thresh_dis = 207
             if self.cratedroppped == 1:
-                thresh_dis = 200
+                thresh_dis = 190
         if self.botid == 0:
             if self.cratedroppped == 0:
                 thresh_dis = 185.0
             if self.cratedroppped == 1:
-                thresh_dis = 195
+                thresh_dis = 180.0
         if self.botid == 4:
             print(self.cratedroppped)
             print(self.cratedroppped)
@@ -411,7 +411,7 @@ class navigate_to_assigned_crate(Behaviour):
                     wheel_velocities = [self.botid,-150.0,-150.0,-150.0,165.0,180.0]
             if self.botid == 2: 
                 if self.cratedroppped ==0:
-                    wheel_velocities = [self.botid,700.0,700.0,700.0,165.0,180.0]
+                    wheel_velocities = [self.botid,800.0,800.0,800.0,165.0,180.0]
                 if self.cratedroppped ==1:
                     wheel_velocities = [self.botid,800.0,800.0,800.0,165.0,180.0]
 
@@ -668,9 +668,9 @@ class navigate_to_dropzone(Behaviour):
                 # _,cx2,cy2,_ = self.main_node.all_crates_dict[30]
                 # cx = (cx1+cx2)/2
                 # cy = (cy1+cy2)/2+200.0
-                cx = 1643.0 -70.0
-                cy = 1875.0 + 15.0
-                cb_yaw = 0.03
+                cx = 1580.0 -12.5 - 10.0
+                cy = 1895.0
+                cb_yaw = 0.0
 
             elif self.cratedropped == 1:    
                 cx,cy = self.main_node.blue_D3
@@ -683,7 +683,7 @@ class navigate_to_dropzone(Behaviour):
         if self.botid == 4:
             if self.cratedropped == 0:    
                 cx,cy = self.main_node.red_D1
-                cx = 1010.0 + 70.0
+                cx = 1010.0 + 70.0 - 15.0
                 cy = 1223.0
                 cb_yaw = -1.5
             elif self.cratedropped == 1:    
@@ -698,9 +698,9 @@ class navigate_to_dropzone(Behaviour):
 
         if self.botid == 2:
             if self.cratedropped == 0:
-                cx = 1643.0 - 60.0 
-                cy = 1875.0 + 45.0 + 8.0
-                cb_yaw = 0.03
+                cx = 1580.0 
+                cy = 1895.0 + 25.0
+                cb_yaw = 0.0
 
             elif self.cratedropped == 1 :
                 cx,cy = self.main_node.green_D2
@@ -756,11 +756,12 @@ class navigate_to_dropzone(Behaviour):
             pose = np.array([-pid_x_robot,pid_y_robot,-pid_yaw])
             s_linalg = np.linalg.solve(self.main_node.A, pose)
 
-            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],165.0,180.0]
+            wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+            
             if (self.cratedropped == 1 and self.botid == 0) or (self.cratedropped == 1 and self.botid == 4):
                 wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],170.0,65.0]
             elif (self.cratedropped == 0 and self.botid == 0):
-                wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],160.0,180.0]
+                wheel_velocities = [self.botid,s_linalg[0],s_linalg[1],s_linalg[2],155.0,180.0]
             self.main_node.publish_wheel_velocities(wheel_velocities)
             
         if self.botid == 2:
@@ -806,7 +807,7 @@ class navigate_to_dropzone(Behaviour):
                 if self.cratedropped == 0:
                     wheel_velocities = [self.botid,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,(byaw-cb_yaw)*50,150.0,180.0]
                     self.main_node.publish_wheel_velocities(wheel_velocities)
-                    if  0.025 <= byaw <= 0.035:  
+                    if  -0.01 <= byaw <= 0.01:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,180.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
@@ -819,12 +820,12 @@ class navigate_to_dropzone(Behaviour):
                         return Status.SUCCESS    
                 
             if self.botid == 2:
-                wheel_velocities = [self.botid,(byaw-cb_yaw)*80,(byaw-cb_yaw)*80,(byaw-cb_yaw)*80,165.0,175.0]
+                wheel_velocities = [self.botid,(byaw-cb_yaw)*150,(byaw-cb_yaw)*150,(byaw-cb_yaw)*150,165.0,175.0]
 
                 self.main_node.publish_wheel_velocities(wheel_velocities)
 
                 if self.cratedropped == 0:
-                    if 0.00 <= byaw <= 0.05:  
+                    if -0.01 <= byaw <= 0.01:  
                         wheel_velocities = [self.botid,0.0,0.0,0.0,175.0,180.0]
                         self.main_node.publish_wheel_velocities(wheel_velocities)
                         return Status.SUCCESS
