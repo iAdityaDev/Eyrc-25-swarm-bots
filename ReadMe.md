@@ -1,4 +1,4 @@
-<h1 align="center">eYRC Holo Battalion Theme 2025-26</h1>
+<h3 align="center">eYRC Holo Battalion Theme 2025-26</h3>
 
 In this Compeitition our theme was to make autonomous three-omni wheeled holonomic with 2-DOF Robotics ARM mounted on the bot. Our task was to pickup the food crates from their pickup Zones and place them in their respective designated dropzones against timer running on the clock.
 The Compeition was divided into the two Stages:-
